@@ -374,9 +374,9 @@ namespace core
             GridTerminalSystem.SearchBlocksOfName(configID, _configs);
             List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
             GridTerminalSystem.SearchBlocksOfName(debugID, _debugs);
-            if (_debugs.Count == 1)
+            if (_debugs.Count > 0)
             {
-                debugger.Add((IMyTextPanel)_debugs.First());
+                debugger.Add((IMyTextPanel)_debugs[0]);
                 debugEnabled = true;
             }
 
@@ -497,8 +497,8 @@ namespace core
                         IMyTextPanel _panel = (IMyTextPanel)_blocks[i];
                         if (_panel.GetPublicTitle().Contains(debugID))
                         {
-                            //debugger.Add(_panel);
-                            //debugEnabled = true;
+                            debugger.Add(_panel);
+                            debugEnabled = true;
                         }
                         else
                         {
