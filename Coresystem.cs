@@ -14,6 +14,9 @@ namespace core
 {
     public class mainframe
     {
+        IMyGridTerminalSystem GridTerminalSystem; // comment me out in space engineers
+        bool VSTUDIO = false;
+
         /// RECOMMERED:
         /// 
         // To use an EXTERNAL CONFIG SCREEN you have to rename one LCD on your GRID with the following ID 
@@ -22,8 +25,11 @@ namespace core
         // To use a Debugger Screen you have to set the desired Screens PUBLIC TITLE to the following ID:
         const string debugID = "$IOS <CORE> Debug";
         ///<SUMMARY>
+        // Mandatory Blockname of your Mainframe
+        const string coreID = "$IOS <CORE> MAINFRAME";
+        // Mandatory Blockname of your EDI Defence Mainframe
+        const string EDIID = "$IOS <EDI> ADDON";
 
-        IMyGridTerminalSystem GridTerminalSystem; // comment me out in space engineers
 
         const string creator = "Mahtrok";
         const string cocreator = "cccdemon";
@@ -127,8 +133,6 @@ namespace core
         const string thrusterID = "$Thru";
         // if new block and not yet observed by this script
         const string noConfigID = "$NA";
-        const string coreID = "$IOS <CORE>";
-        const string EDIID = "$IOS <EDI>";
         const string traderID = "$IOS <TRADER>";
         const string updateID = "$IOS <UPDATE>";
         // << 3.0 COLOR SETTINGS >> //
@@ -181,7 +185,7 @@ namespace core
         List<IMyProgrammableBlock> programs;
         List<IMyProgrammableBlock> traders;
         List<IMyTimerBlock> timers;
-        IMyTimerBlock securityTimer;
+        //IMyTimerBlock securityTimer;
         IMyProgrammableBlock core;
         IMyProgrammableBlock EDI;
         List<IMyLargeGatlingTurret> gatlings;
@@ -343,6 +347,66 @@ namespace core
         ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
         /*                                                                       INITIALIZATION                                                                           */
         ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+        void _FindRecommeredScreens()
+        {
+            List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
+            GridTerminalSystem.SearchBlocksOfName(debugID, _debugs);
+            if (_debugs.Count > 0)
+            {
+                debugger.Add((IMyTextPanel)_debugs[0]);
+                debugEnabled = true;
+            }
+            List<IMyTerminalBlock> _configScreens = new List<IMyTerminalBlock>();
+//            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_configScreens);
+            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_configScreens);
+            int _screens = 0;
+            Debug("Screens found:" + _configScreens.Count);
+            for (int i = 0; i < _configScreens.Count; i++)
+            {
+                if (_configScreens[i].CustomName.Contains(configID)) {
+                    _screens++;
+                    config = (IMyTextPanel)_configScreens[i];
+                    Debug("ConfigScreen found who contains the name:" + configID);
+                    if (_screens > 1)
+                    {
+                        enabled = false;
+                        Debug("==============================================");
+                        Debug("CRITICAL ERROR: Detected more then 1 $IOS config!");
+                        Debug("Please rename or undock every $IOS config, but the ");
+                        Debug("One belonging to this Station!");
+                        Debug("==============================================");
+                        Debug("Program has been halted.");
+
+                    } else {
+                        if (config == null)
+                        {
+                            Debug("No external config file found.");
+                            if (platformID == "")
+                                platformID = GetRandomPlatformID().ToString();
+                        }
+                        else
+                        {
+                            if (enabled)
+                            {
+                                Debug("External config file found! Loading DATA...");
+                                LoadExternalConfigData();
+                            }
+                            else
+                            {
+                                Debug("Program has been halted.");
+                            }
+                            config = (IMyTextPanel)_configScreens[0];
+                            config.ShowPublicTextOnScreen();
+                            //config.SetValue("BackgroundColor", panelDefaultBG);
+                            //config.SetValue("FontColor", panelDefaultFC);
+                            //config.SetValue("FontSize", 0.8f);
+                            initialized = true;
+                        }
+                    }
+                }
+            }
+            
+        }
         void Init()
         {
             debugMessages = new List<string>();
@@ -370,53 +434,11 @@ namespace core
             gatlings = new List<IMyLargeGatlingTurret>();
             missiles = new List<IMyLargeMissileTurret>();
             turrets = new List<IMyLargeInteriorTurret>();
-            List<IMyTerminalBlock> _configs = new List<IMyTerminalBlock>();
-            GridTerminalSystem.SearchBlocksOfName(configID, _configs);
-            List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
-            GridTerminalSystem.SearchBlocksOfName(debugID, _debugs);
-            if (_debugs.Count > 0)
-            {
-                debugger.Add((IMyTextPanel)_debugs[0]);
-                debugEnabled = true;
+            if (!VSTUDIO) {
+                _FindRecommeredScreens();
             }
+            installEnabled = true;
 
-
-            if (_configs.Count > 1)
-            {
-                enabled = false;
-                Debug("==============================================");
-                Debug("CRITICAL ERROR: Detected more then 1 $IOS config!");
-                Debug("Please rename or undock every $IOS config, but the ");
-                Debug("One belonging to this Station!");
-                Debug("==============================================");
-            }
-            else
-            {
-                config = (IMyTextPanel)_configs[0];
-                config.ShowPublicTextOnScreen();
-                //config.SetValue("BackgroundColor", panelDefaultBG);
-                //config.SetValue("FontColor", panelDefaultFC);
-                //config.SetValue("FontSize", 0.8f);
-            }
-            if (config == null)
-            {
-                Debug("No external config file found.");
-                if (platformID == "")
-                    platformID = GetRandomPlatformID().ToString();
-            }
-            else
-            {
-                if (enabled)
-                {
-                    Debug("External config file found! Loading DATA...");
-                    LoadExternalConfigData();
-                }
-                else
-                {
-                    Debug("Program has been halted.");
-                }
-            }
-            initialized = true;
         }
         void GetBlocks()
         {
@@ -549,6 +571,7 @@ namespace core
                     }
                 }
             }
+            Debug("Found: " + lights.Count + " lights");
             booted = true;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -611,9 +634,13 @@ namespace core
                         case "IMyShipController":
                             _blockText = _blockText + terminalID + _blockTextEnd; break;
                         case "IMyTextPanel":
-                            _blockText = _blockText + panelID + _blockTextEnd; break;
+                            //_blockText = _blockText + panelID + _blockTextEnd; 
+                            _blockText = _oldName;
+                            break;
                         case "IMyProgrammableBlock":
-                            _blockText = _blockText + programID + _blockTextEnd; break;
+                            //_blockText = _blockText + programID + _blockTextEnd; break;
+                            _blockText =_oldName;
+                            break;
                         case "IMyTimerBlock":
                             _blockText = _blockText + timerID + _blockTextEnd; break;
                         case "IMyLargeGatlingTurret":
@@ -625,6 +652,7 @@ namespace core
                         default:
                             _blockText = _blockText + " Unknown Block" + DIVIDER + _oldName + _blockTextEnd; break;
                     }
+                    if (!_blockList[i].CustomName.Contains(platformID))
                     _blockList[i].SetCustomName(_standardText + _blockText);
                 }
             }
@@ -732,6 +760,7 @@ namespace core
             GridTerminalSystem.GetBlocksOfType<IMyLargeInteriorTurret>(_blocks);
             _FormatBlock(_blocks, "IMyLargeInteriorTurret");
             // JUST ADD NEW LINES FOR NEW BLOCKTYPES
+            installEnabled = true;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                       DEINSTALLATION                                                                       */
@@ -759,6 +788,7 @@ namespace core
                     _blocks[i].SetCustomName(_name);
                 }
             }
+            installEnabled = false;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                           EXTERNAL DATA PROCESSING                                                            */
@@ -907,6 +937,8 @@ namespace core
             condition = _condition;
             StoreExternalConfigData();
             Debug("New Condition: [" + _condition + "]");
+            Debug("Switching Lights: " + lights.Count);
+
             if (!booted)
                 GetBlocks();
             Color lcdBGColor = new Color(0, 0, 0);
@@ -939,9 +971,12 @@ namespace core
                     }
                     break;
                 case "red":
+                    Debug("Switching Lights to condition red");
                     lcdBGColor = conditionRedBG;
                     fontColor = conditionRedFC;
                     lightColor = conditionRedLight;
+                    Debug("Switching Lights:" + lightColor.ToString());
+
                     for (int i = 0; i < lights.Count; i++)
                     {
                         lights[i].SetValue("Color", lightColor);
@@ -1022,23 +1057,24 @@ namespace core
         {
 
         }
-        void SetAlertCondition(String _condition)
-        {
-            Debug("alert");
-        }
+        // if a Argument starts with API:
         void ProcessAPIArgument(string _argument)
         {
             Debug(_argument);
-            if (_argument.Contains("attack detected"))
-            {
-                SetAlertCondition("red");
-            }
-            if (_argument.Contains("attack defended"))
-            {
-                SetAlertCondition("green");
+            _argument = _argument.ToLower();
+            if (_argument.Contains("api: edi logon")) {
+                ediInstalled = true;
+                StoreExternalConfigData();                                            
             }
 
-
+            if (_argument.Contains("api: attack detected"))
+            {
+                Debug("Set AlertCondition: RED"); SetCondition("red");
+            }
+            if (_argument.Contains("api: attack defended"))
+            {
+                Debug("Set AlertCondition: GREEN"); SetCondition("green");
+            }
         }
     }
 }

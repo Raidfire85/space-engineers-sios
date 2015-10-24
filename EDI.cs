@@ -127,8 +127,8 @@ namespace core.edi
         const string missileID = "$MTur";
         const string gatlingID = "$GTur";
         const string turretID = "$ITur";
-        const string coreID = "$IOS <CORE>";
-        const string configID = "$IOS EDI Config";
+        const string coreID = "$IOS <CORE> Mainframe";
+        const string configID = "$IOS Config";
 
 
 
@@ -249,9 +249,54 @@ namespace core.edi
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                       MAIN METHOD                                                                           */
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        void _FindRecommeredScreens()
+        {
+            List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
+            GridTerminalSystem.SearchBlocksOfName(debugID, _debugs);
+            if (_debugs.Count > 0)
+            {
+                debugger.Add((IMyTextPanel)_debugs[0]);
+                debugEnabled = true;
+            }
+            List<IMyTerminalBlock> _configScreens = new List<IMyTerminalBlock>();
+            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_configScreens);
+            int _screens = 0;
+            Debug("Screens found:" + _configScreens.Count);
+            for (int i = 0; i < _configScreens.Count; i++)
+            {
+                if (_configScreens[i].CustomName.Contains(configID))
+                {
+                    _screens++;
+                    config = (IMyTextPanel)_configScreens[i];
+                    Debug("ConfigScreen found who contains the name:" + configID);
+                    Debug("External config file found! Loading DATA...");
+                    LoadExternalConfigData();
+                 }
+                if (_screens == 0) 
+                {
+                    Debug("No Configscreen found");
+                }
+            }
+
+        }
+        void _FindCoreOS() {
+            List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
+            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_blocks);
+
+            for (int i = 0; i < _blocks.Count; i++)
+            {
+                if (_blocks[i].CustomName.Contains(coreID))
+                {
+                    IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
+                    core = _program;
+                    core.TryRun("API: attack detected");
+                }
+            }
+        }
 
         public void Init()
         {
+            
             debugMessages = new List<string>();
             gravs = new List<IMyGravityGenerator>();
             airvents = new List<IMyAirVent>();
@@ -266,35 +311,10 @@ namespace core.edi
             turrets = new List<IMyLargeInteriorTurret>();
             gatlings = new List<IMyLargeGatlingTurret>();
             missiles = new List<IMyLargeMissileTurret>();
-            List<IMyTerminalBlock> _configs = new List<IMyTerminalBlock>();
-            GridTerminalSystem.SearchBlocksOfName(configID, _configs);
-            List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
-            GridTerminalSystem.SearchBlocksOfName(debugID, _debugs);
-            if (_debugs.Count > 0) {
-                debugger.Add((IMyTextPanel)_debugs[0]);
-                debugEnabled = true;
-            }
-
-            if (_configs.Count > 1)
-            {
-                Debug("==============================================");
-                Debug("CRITICAL ERROR: Detected more then 1 $IOS config!");
-                Debug("Please rename or undock every $IOS config, but the ");
-                Debug("One belonging to this Station!");
-                Debug("==============================================");
-            }
-            else
-            {
-                config = (IMyTextPanel)_configs[0];
-                config.ShowPublicTextOnScreen();
-                //config.SetValue("BackgroundColor", panelDefaultBG);
-                //config.SetValue("FontColor", panelDefaultFC);
-                //config.SetValue("FontSize", 0.8f);
-            }
-            if (config == null)
-            {
-                Debug("No external config file found.");
-            }
+            _FindCoreOS();
+            _FindRecommeredScreens();
+            // Calling Core: Hello EDI is active
+            core.TryRun("API: EDI LOGON");
         }
 
         void Main(string argument)
@@ -303,6 +323,7 @@ namespace core.edi
             ////////////////////// INITIALIZATION
             Init();
             if (argument != "")
+                Debug("Processing Argument: " + argument);
                 ProcessArgument(argument);
             ////////////////////// GETTING ALL BLOCKs
             if (!booted)
@@ -313,20 +334,7 @@ namespace core.edi
                 Debug("<EDI>: Active");
                 if (hackDetected || attackDetected)
                 {
-                    List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
-                    GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_blocks);
-
-                    for (int i = 0; i < _blocks.Count; i++)
-                    {
-                        if (_blocks[i].CustomName.Contains(programID))
-                        {
-                            IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
-                            if (_program.CustomName.Contains(coreID)) { 
-                                core = _program;
-                                core.TryRun("API: attack detected");
-                            }
-                        }
-                    }
+                   
                     //IMyTerminalBlock CORE = GridTerminalSystem.GetBlockWithName("$IOS CORE");
                     //core = (IMyProgrammableBlock)CORE;
                     //core.TryRun("API: attack detected");
@@ -359,17 +367,23 @@ namespace core.edi
             Debug("Argument: " + _argument);
             _argument = _argument.ToLower();
    
-            if (_argument.Contains("debug")) {
+            if (_argument.Contains("debug") || _argument.Contains("api:")) {
                 List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
-                GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_blocks);
+                GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_blocks);
                 Debug("Argument contains debug");
+                Debug("Searchring for $IOS CORE with Name:" + coreID);
+                Debug("Programmable Blocks Found:" + _blocks.Count);
                 for (int i = 0; i < _blocks.Count; i++)
                 {
-                    if (_blocks[i].CustomName.Contains(programID))
+                    Debug("Researching Block with name: " + _blocks[i].CustomName);
+                    if (_blocks[i].CustomName.Contains(coreID))
                     {
+                        Debug("Found block which contains " + programID);
                         IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
+                        Debug("Searching for programmname: " + coreID + " - founding: " + _program.CustomName);
+                        Debug("wohoooo: sending command to core");
                         core = _program;
-                        core.TryRun("API: attack detected");
+                        core.TryRun(_argument);
                     }
                 }
             }  
@@ -606,14 +620,14 @@ namespace core.edi
 
         void StoreExternalConfigData()
         {
-            string _file = "$platformID: " + platformID + blank;
+           /* string _file = "$platformID: " + platformID + blank;
             _file += "$programID: " + programID + blank;
             _file += "$platformRoleID: " + platformRoleID.ToString() + blank;
             _file += "$condition: " + condition + blank;
             _file += "$install enabled: " + installEnabled.ToString() + blank;
             _file += "$activate security: " + securityActive.ToString() + blank;
             _file += "$edi Debug: " + debugEnabled.ToString() + blank;
-            config.WritePublicText(_file);
+            config.WritePublicText(_file); */
         }
 
         void Display()
