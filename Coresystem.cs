@@ -19,157 +19,103 @@ namespace core
         bool VSTUDIO = false;
 
         /// RECOMMERED:
-        /// 
-        // To use an EXTERNAL CONFIG SCREEN you have to rename one LCD on your GRID with the following ID 
+        ///
+        // To use an EXTERNAL CONFIG SCREEN you have to rename one LCD on your GRID with the following ID
         // (and only with this ID!)
-        const string configID = "_SIOS_Config_";
+        const string SIOS_CONFIG_SCREEN_ID = "_SIOS_CONFIG_";
         // To use a Debugger Screen you have to set the desired Screens PUBLIC TITLE to the following ID:
-        const string debugID = "_SIOS_CORE_Debug_";
+        const string SIOS_DEBUG_SCREEN_ID = "_SIOS_CORE_DEBUG_";
         ///<SUMMARY>
         // Mandatory Blockname of your Mainframe
-        const string coreID = "_SIOS_CORE_MAINFRAME_";
+        const string SYOS_PROGRAMBLOCK_ID = "_SIOS_CORE_MAINFRAME_";
         // Mandatory Blockname of your EDI Defence Mainframe
-        const string EDIID = "_SIOS_EDI_ADDON_";
+        const string SYOS_ADDON_EDI_ID = "_SIOS_EDI_ADDON_";
+        // Mandatory Blockname of your TVI Trading Mainframe
+        const string SYOS_ADDON_TVI_ID = "_SIOS_TVI_ADDON_";
 
-        Dictionary<string, string> configDict;
+        Dictionary<string, string> RUNNING_CONFIGURATION;
 
-        const string creator = "Mahtrok";
-        const string cocreator = "cccdemon";
-        const string title = "$IOS <CORE> ";
+        string platformID = "";
+        bool INSTALL_ENABLED = false;
+        bool hideVersionInfoOnScreen = false;
+        bool allowBeaconRename = false;
+        // Creator Consts
+        const string CREATOR = "Mahtrok";
+        const string CO_CREATOR = "cccdemon";
+        const string TITLE = "$IOS <CORE> ";
         const string version = "v1.1";
         const string created = "10-09-15";
         const string updated = "10-24-15";
         const string contact = "Mahtrok@mahtrok.de";
         const string company = "Exodus Systems - 2015";
-        /// Exodus Systems - $IOS - Self installing operating system <CORE>
-        /// As the name mentions this Script is used to install itself into an existing Grid (Small-, Large Ship or Station) by
-        /// renaming all Blocks. The Script adds a platformID and different block IDs into every block to be compatible 
-        /// with all Exodus Systems Scripts.
-        /// It also provides the abillity to be configurated by an external config LCD (has to be named as "$IOS Config") and
-        /// will be filled with default values if not manually set up. 
-        /// This single config screen will be used by each of the Mahriane Soft Scripts you install into your Grid, you can 
-        /// then configure them all from this screen.
-        /// Once installed all Mahriane Soft Scripts will be able to identify the Blocks they require by searching for the 
-        /// exact same blockID's. By providing a platformID inside the config Screen, all Mahriane Soft Scripts will use 
-        /// only those blocks belonging to the parent Platform / Ship.
-        /// - In case you want to use the Script without an external configuration screen, you will have to add this platform
-        /// ID manually to all Scripts and configure them one by one.
-        /// - In case you leave the platform ID empty, each Script will create a random platform ID when it is running the 
-        /// first time which will cause problems if every Script uses its own platformID. So ensure to add 1 unique ID to all
-        /// Scripts manually!
-        /// The Script also provides some argument management (you can find all available arguments @ the end of this 
-        /// summary.)
-        /*
-        EXTERNAL CONFIG STRUCTURE: (If Config screen is left empty it will automatically be written the first run if named correct)
-        $platformID: 
-        $platformRoleID: 0
-        $condition: green
-        $install enabled: False
-        $hide version info: False
-        $allow beacon rename: False
-        $activate security: True
-        $LCD BG Color: {R:40 G:40 B:40 A:255}
-        $LCD Font Color: {R:0 G:0 B:0 A:255}
-        AVAILABLE PASS-IN ARGUMENTS:
-        Delete: text                             // Deletes the passed in "text" within all blocks custom names
-        Replace: text1, text2               // Replaces the passed in "text1" with "text2" within all custom names
-        Install                                      // sets installEnabled == true for 1 single run of the Script.
-        Uninstall                                  // removes all $IOS IDs within all blocks custom names
-                                                        // ATTENTION: To uninstall you have to use the correct (if existing) platformID!
-        new ID                                     // generates a new random ID (0-1000), stores this new ID @ config Screen 
-                                                        // if external config is used.
-        contact                                    // Debugs the Contact data
-        condition: red, orange, green // Changing the condition, used to change colors on LCD screens and interior Lights
-        reboot                                      // Reinitializing the Script
-        ATTENTION: Except the Config and the Debug Screen, all LCDs that should be used by $IOS have to be public titled
-        with the infoID! "$Info" by default
-        LCDs that are titled something else, will not be used at any time, so you will not get a visual output as well!
-        */
-        ///</SUMMARY>
-        // << 1.0 GENERAL SETTINGS >> //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // NOTE: If you are using an external config screen LEAVE THESE VALUES AS THEY ARE! They will be overwritten.   //
-        // If you are configuring this Script manually follow the instructions. Read carefully!                                                     //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // The platform ID. SHOULD be a short number between 0 and 1000, but CAN BE anything.
-        string platformID = "";
-        // Manually set script to installation mode. Program will rename all functional blocks not yet having the platformID.
-        // NOTE: If any ships are docked with the platform while install is running, their blocks will be renamed too! So ensure
-        // to undock everyone before you activate install!
-        bool installEnabled = false;
-        // Display the script version info on all LCD screens? If not (false), it will still be shown on the debugger screen!
-        bool hideVersionInfoOnScreen = false;
-        // Should this Script be allowed to automatically rename the Beacons on this Grid?
-        bool allowBeaconRename = false;
-        // << 2.0 BLOCK ID SETTINGS >> //
-        // These Shortcuts will be added to the blocks CustomNames to be identified by all Mahriane Soft Scripts. Not every Script
-        // will need all IDs. If you want to change these IDs Uninstall the program first, then change the IDs and reinstall the Script.
-        // Ensure that you add your adjusted IDs to all Mahriane Soft Scripts so they are able to find their blocks!
-        const string assemblerID = "$Asse";
-        const string refineryID = "$Refi";
-        const string cargoID = "$Carg";
-        const string connectorID = "$Conn";
-        const string collectorID = "$Coll";
-        const string batteryID = "$Batt";
-        const string gravityID = "$Grav";
-        const string reactorID = "$Reac";
-        const string sorterID = "$Sort";
-        const string oxygenID = "$OxyG";
-        const string oxyFarmID = "$OxyF";
-        const string oxyTankID = "$OxyT";
-        const string airVentID = "$Vent";
-        const string doorID = "$Door";
-        const string storageID = "$Stor";
-        const string productionID = "$Prod";
-        const string speakerID = "$Spea";
-        const string lightID = "$Light";
-        const string terminalID = "$Ctrl";
-        const string sensorID = "$Sen";
-        const string panelID = "$LCD";
-        const string infoID = "$Info";
-        const string programID = "$Prog";
-        const string timerID = "$Time";
-        const string missileID = "$MTur";
-        const string gatlingID = "$GTur";
-        const string turretID = "$ITur";
-        const string thrusterID = "$Thru";
-        // if new block and not yet observed by this script
-        const string noConfigID = "$NA";
-        const string traderID = "$IOS <TRADER>";
-        const string updateID = "$IOS <UPDATE>";
-        // << 3.0 COLOR SETTINGS >> //
-        // Condition Manager: To define the background and font Color for your LCDs
+
+        const string LF = "\n";
+        const string TAB = "    ";
+        const string BLANK = " ";
+        const char DIVIDER = '|';
+        const char LIST_DIVIDER = ',';
+        const char CONFIG_DIVIDER = '$';
+        const char CONFIG_SEPARATOR = ':';
+        const char SUFFIX = ']';
+        const string PREFIX = "[";
+
+        // Rename Consts
+        const string ASSEMBLER_ID = "$Asse";
+        const string REFINERY_ID = "$Refi";
+        const string CARGO_ID = "$Carg";
+        const string CONNECTOR_ID = "$Conn";
+        const string COLLECTOR_ID = "$Coll";
+        const string BATTERY_ID = "$Batt";
+        const string GRAVITY_ID = "$Grav";
+        const string REACTOR_ID = "$Reac";
+        const string SORTER_ID = "$Sort";
+        const string OXYGEN_ID = "$OxyG";
+        const string OXY_FARM_ID = "$OxyF";
+        const string OXY_TANK_ID = "$OxyT";
+        const string AIR_VENT_ID = "$Vent";
+        const string DOOR_ID = "$Door";
+        const string STORAGE_ID = "$Stor";
+        const string PRODUCTION_ID = "$Prod";
+        const string SPEAKER_ID = "$Spea";
+        const string LIGHT_ID = "$Light";
+        const string TERMINAL_ID = "$Ctrl";
+        const string SENSOR_ID = "$Sen";
+        const string PANEL_ID = "$LCD";
+        const string INFO_ID = "$Info";
+        const string PROGRAM_ID = "$Prog";
+        const string TIMER_ID = "$Time";
+        const string MISSILE_TURRET_ID = "$MTur";
+        const string GATTLING_TURRET_ID = "$GTur";
+        const string TURRET_ID = "$ITur";
+        const string THRUSTER_ID = "$Thru";
+        const string NO_CONFIG_ID = "$NA";
+        const string TRADER_ID = "$IOS <TRADER>";
+        const string UPDATE_ID = "$IOS <UPDATE>";
+
+        // Screen/Alarm Color Config
         Color conditionRedBG = new Color(40, 0, 0);
         Color conditionOrangeBG = new Color(40, 10, 0);
         Color panelDefaultBG = new Color(40, 40, 40);
         Color conditionRedFC = new Color(255, 255, 255);
         Color conditionOrangeFC = new Color(255, 255, 255);
         Color panelDefaultFC = new Color(0, 0, 0);
-        // Condition Manager: To define the Colors for the Interior Lights
         Color conditionRedLight = new Color(255, 0, 0);
         Color conditionOrangeLight = new Color(255, 110, 0);
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // THERE IS NO NEED TO CHANGE ANYTHING BELOW THIS LINE, AS LONG AS YOU DO NOT EXACTLY KNOW WHAT  //
         // YOU ARE DOING!                                                                                                                                                              //
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        const char divider = '|';
-        const char DIVIDER = '|';
 
-        const char listDivider = ',';
-        const char configDivider = '$';
-        const char configSeparator = ':';
-
-        const char suffix = ']';
-        const char SUFFIX = ']';
-        const string prefix = "[";
-        const string PREFIX = "[";
-        bool debugEnabled = false;
-        bool booted = false;
-        bool securityActive = false;
-        bool initialized = false;
-        bool enabled = true;
+        bool DEBUG_ENABLED = false;
+        bool BOOTED = false;
+        bool SECURITY_ACTIVE = false;
+        bool INITIALIZED = false;
+        // ??
+        bool ENABLED = true;
 
         /// <Command API>
+        const string API_RELOAD_CONFIG = "API_RELOAD_CONFIG"
         const string API_RAISE_ALARM = "API_RAISE_ALARM";
         const string API_DISABLE_ALARM = "API_DISABLE_ALARM";
         const string API_SHUTDOWN_SHIP = "API_SHUTDOWN_SHIP";
@@ -193,6 +139,29 @@ namespace core
         const string API_COM_LOGON = "API_COM_LOGON";
         const string API_COM_LOGOFF = "API_COM_LOGOFF ";
         /// </Command API>
+        Dictionary<string, string> API_COMMANDS = new Dictionary<string, string>();
+        API_COMMANDS.add(API_RELOAD_CONFIG,API_RELOAD_CONFIG);
+        API_COMMANDS.add(API_RAISE_ALARM,API_RAISE_ALARM);
+        API_COMMANDS.add(API_DISABLE_ALARM,API_DISABLE_ALARM);
+        API_COMMANDS.add(API_SHUTDOWN_SHIP,API_SHUTDOWN_SHIP);
+        API_COMMANDS.add(API_BOOT_SHIP,API_BOOT_SHIP);
+        API_COMMANDS.add(API_DISABLE_BLOCK,API_DISABLE_BLOCK);
+        API_COMMANDS.add(API_ENABLE_BLOCK,API_ENABLE_BLOCK);
+        API_COMMANDS.add(API_ATTACK_DETECTED,API_ATTACK_DETECTED);
+        API_COMMANDS.add(API_ATTACK_DEFENDET,API_ATTACK_DEFENDET);
+        API_COMMANDS.add(API_COLLISION_ALERT,API_COLLISION_ALERT);
+        API_COMMANDS.add(API_STATUS_GREEN,API_STATUS_GREEN);
+        API_COMMANDS.add(API_STATUS_ORANGE,API_STATUS_ORANGE);
+        API_COMMANDS.add(API_STATUS_RED,API_STATUS_RED);
+        API_COMMANDS.add(API_CANT_PRESURISE,API_CANT_PRESURISE);
+        API_COMMANDS.add(API_EDI_LOGON,API_EDI_LOGON);
+        API_COMMANDS.add(API_EDI_LOGOFF,API_EDI_LOGOFF);
+        API_COMMANDS.add(API_TVI_LOGON,API_TVI_LOGON);
+        API_COMMANDS.add(API_TVI_LOGOFF,API_TVI_LOGOFF);
+        API_COMMANDS.add(API_COM_LOGON,API_COM_LOGON);
+        API_COMMANDS.add(API_COM_LOGOFF,API_COM_LOGOFF);
+
+
 
         /// Config Text Consts
         const string KEY_PLATTFORM_ID = "C_PLATTFORM_ID";
@@ -208,7 +177,7 @@ namespace core
         const string KEY_EDI_INSTALLED = "C_EDI_INSTALLED";
         const string KEY_ATI_INSTALLED = "C_ATI_INSTALLED";
 
-        
+
         string VALUE_PLATTFORM_ID = "0";
         string VALUE_PLATFORM_ROLE_ID = "0";
         string VALUE_CONDITION = "greed";
@@ -243,25 +212,23 @@ namespace core
         List<IMyTerminalBlock> terminals;
         List<IMyTextPanel> panels;
         List<IMyTextPanel> debugger;
-        IMyTextPanel config;
         List<IMyProgrammableBlock> programs;
         List<IMyProgrammableBlock> traders;
         List<IMyTimerBlock> timers;
-        //IMyTimerBlock securityTimer;
-        IMyProgrammableBlock core;
-        IMyProgrammableBlock EDI;
         List<IMyLargeGatlingTurret> gatlings;
         List<IMyLargeMissileTurret> missiles;
         List<IMyLargeInteriorTurret> turrets;
+
         List<MARole> platformRoles;
+
+        IMyTextPanel config;
+        IMyTimerBlock securityTimer;
+        IMyProgrammableBlock core;
+        IMyProgrammableBlock EDI;
+
         int platformRoleID = 0;
         int airVentCnt = 0;
-        const string blank = "\n";
-        const string tab = "    ";
-        const string empty = " ";
         string condition = "green";
-
-
         bool ediInstalled = false;
         bool tmviInstalled = false;
 
@@ -276,21 +243,21 @@ namespace core
         }
         string GetTimeStamp()
         {
-            return prefix + System.DateTime.Now.Hour.ToString() + ":"
+            return PREFIX + System.DateTime.Now.Hour.ToString() + ":"
             + System.DateTime.Now.Minute.ToString() + ":"
-            + System.DateTime.Now.Second.ToString() + suffix;
+            + System.DateTime.Now.Second.ToString() + SUFFIX;
         }
         string GetVersionInfo()
         {
-            return title + empty + version + " by " + creator + ", last Update: " + updated + blank;
+            return TITLE + BLANK + version + " by " + CREATOR + ", last Update: " + updated + LF;
         }
         string GetContactData()
         {
-            return blank + "Creator: " + creator + blank + "E-Mail: " + contact + blank + company;
+            return LF + "Creator: " + CREATOR + LF + "E-Mail: " + contact + LF + company;
         }
         string GetCoContactData()
         {
-            return blank + "CoAutor: " + cocreator + blank;
+            return LF + "CoAutor: " + CO_CREATOR + LF;
         }
         string GetDebugInfo()
         {
@@ -312,17 +279,17 @@ namespace core
         {
 
             if (argument == "reinstall") {
-               initialized = false;
+               INITIALIZED = false;
             }
-                
+
             ///////////////////// INITIALIZATION /////////////////////
-            if (!initialized) {
+            if (!INITIALIZED) {
                 _generateConfig();
                 Init();
                 Debug("System Initialized");
             }
             ////////////////////// DEBUGGER ///////////////////////
-            if (debugEnabled)
+            if (DEBUG_ENABLED)
                 DisplayDebug();
             if (argument == "reload")
             {
@@ -330,15 +297,15 @@ namespace core
             }
 
 
-            /*if (enabled)
+            /*if (ENABLED)
             {
                 if (argument != "")
                     ProcessArgument(argument);
                 ///////////////////// INSTALLATION /////////////////////
-                if (installEnabled)
+                if (INSTALL_ENABLED)
                     Install();
                 ////////////////// GETTING ALL BLOCKs /////////////////
-                if (!booted && initialized)
+                if (!BOOTED && INITIALIZED)
                 {
                     GetBlocks();
                 }
@@ -348,7 +315,9 @@ namespace core
             Display();
             ///////////////////// RESET SCRIPT ////////////////////
             Reset();*/
+
         }
+
         void ProcessArgument(string _argument)
         {
             _argument = _argument.ToLower();
@@ -365,7 +334,7 @@ namespace core
             else if (_argument.StartsWith("condition: "))
             {
                 _argument = _argument.Substring(11).ToLower();
-                SetCondition(_argument.Replace(empty, "").Replace(blank, ""));
+                SetCondition(_argument.Replace(BLANK, "").Replace(LF, ""));
             }
             else if (_argument.StartsWith("api: "))
             {
@@ -380,8 +349,8 @@ namespace core
                 {
                     case "new id": platformID = GetRandomPlatformID().ToString(); StoreExternalConfigData(); break;
                     case "uninstall": Uninstall(); break;
-                    case "install": installEnabled = true; Reset(); break;
-                    case "reboot": Reset(); initialized = false; Init(); Debug("Rebooting."); break;
+                    case "install": INSTALL_ENABLED = true; Reset(); break;
+                    case "reboot": Reset(); INITIALIZED = false; Init(); Debug("Rebooting."); break;
                     case "contact": Debug(GetContactData()); Debug(GetCoContactData()); break;
                     case "logon_edi": ediInstalled = true; break;
                     case "logon_tmvi": tmviInstalled = true; break;
@@ -405,7 +374,7 @@ namespace core
             string[] _temp = _argument.Split(',');
             if (_temp.Length >= 1)
             {
-                if (_temp[1].StartsWith(empty))
+                if (_temp[1].StartsWith(BLANK))
                     _temp[1] = _temp[1].Substring(1);
                 for (int i = 0; i < _blocks.Count; i++)
                 {
@@ -415,25 +384,25 @@ namespace core
         }
         void Reset()
         {
-            installEnabled = false;
-            enabled = true;
-            booted = false;
+            INSTALL_ENABLED = false;
+            ENABLED = true;
+            BOOTED = false;
             airVentCnt = 0;
         }
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                       INITIALIZATION                                                                           */
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         void _FindDebugScreen()
         {
             List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_debugs);
                 for (int i = 0; i < _debugs.Count; i++)
                 {
-                    if (_debugs[i].CustomName.Contains(debugID))
+                    if (_debugs[i].CustomName.Contains(SIOS_DEBUG_SCREEN_ID))
                     {
                         debugger.Add((IMyTextPanel)_debugs[i]);
                         VALUE_DEBUG_ENABLED = true.ToString();
-                        debugEnabled = true;
+                        DEBUG_ENABLED = true;
                     }
                 }
         }
@@ -447,9 +416,9 @@ namespace core
             for (int i = 0; i < _blocks.Count; i++)
             {
                 Debug("Found Textpanel with name: " + _blocks[i].CustomName);
-                if (_blocks[i].CustomName.Contains(configID))
+                if (_blocks[i].CustomName.Contains(SIOS_CONFIG_SCREEN_ID))
                 {
-                    Debug("Textpanels which contains configID: " + configID);
+                    Debug("Textpanels which contains SIOS_CONFIG_SCREEN_ID: " + SIOS_CONFIG_SCREEN_ID);
                     _screens++; // there should`nt be more than 1!
                     config = (IMyTextPanel)_blocks[i];
                     StoreExternalConfigData();
@@ -460,49 +429,50 @@ namespace core
                 }
             }
             if (_screens == 0) Debug("No Configscreen found");
-            
+
             if (_screens > 1) Debug("WARNING: TO MANY CONFIGSCREENS FOUND");
-            
+
         }
-        void _FindMyself() {
+        void _FindMyseLF() {
            List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
 
             GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_blocks);
             for (int i = 0; i < _blocks.Count; i++)
             {
-                if (_blocks[i].CustomName.Contains(coreID))
+                if (_blocks[i].CustomName.Contains(SYOS_PROGRAMBLOCK_ID))
                 {
                     core = (IMyProgrammableBlock)_blocks[i];
-                    Debug("Found myself - Generating awareness - I know who I am. I am!");
+                    Debug("Found myseLF - Generating awareness - I know who I am. I am!");
                 }
             }
         }
-        void _generateConfig() 
+        void _generateConfig()
         {
-            configDict = new Dictionary<string, string>();
-            configDict.Add(KEY_PLATTFORM_ID, VALUE_PLATTFORM_ID);
-            configDict.Add(KEY_PLATFORM_ROLE_ID, VALUE_PLATFORM_ROLE_ID);
-            configDict.Add(KEY_CONDITION, VALUE_CONDITION );
-            configDict.Add(KEY_INSTALL_ENABLED, VALUE_INSTALL_ENABLED);
-            configDict.Add(KEY_HIDE_VERSION_INFO, VALUE_HIDE_VERSION_INFO);
-            configDict.Add(KEY_ALLOW_BEACON_RENAME, VALUE_ALLOW_BEACON_RENAME);
-            configDict.Add(KEY_ACTIVATE_SECURITY, VALUE_ACTIVATE_SECURITY);
-            configDict.Add(KEY_LCD_BG_COLOR, VALUE_LCD_BG_COLOR);
-            configDict.Add(KEY_LCD_FONT_COLOR, VALUE_LCD_FONT_COLOR);
-            configDict.Add(KEY_DEBUG_ENABLED, VALUE_DEBUG_ENABLED);
-            configDict.Add(KEY_EDI_INSTALLED, VALUE_EDI_INSTALLED);
-            configDict.Add(KEY_ATI_INSTALLED, VALUE_ATI_INSTALLED);
-            
-            initialized = true;
+            RUNNING_CONFIGURATION = new Dictionary<string, string>();
+            RUNNING_CONFIGURATION.Add(KEY_PLATTFORM_ID, VALUE_PLATTFORM_ID);
+            RUNNING_CONFIGURATION.Add(KEY_PLATFORM_ROLE_ID, VALUE_PLATFORM_ROLE_ID);
+            RUNNING_CONFIGURATION.Add(KEY_CONDITION, VALUE_CONDITION );
+            RUNNING_CONFIGURATION.Add(KEY_INSTALL_ENABLED, VALUE_INSTALL_ENABLED);
+            RUNNING_CONFIGURATION.Add(KEY_HIDE_VERSION_INFO, VALUE_HIDE_VERSION_INFO);
+            RUNNING_CONFIGURATION.Add(KEY_ALLOW_BEACON_RENAME, VALUE_ALLOW_BEACON_RENAME);
+            RUNNING_CONFIGURATION.Add(KEY_ACTIVATE_SECURITY, VALUE_ACTIVATE_SECURITY);
+            RUNNING_CONFIGURATION.Add(KEY_LCD_BG_COLOR, VALUE_LCD_BG_COLOR);
+            RUNNING_CONFIGURATION.Add(KEY_LCD_FONT_COLOR, VALUE_LCD_FONT_COLOR);
+            RUNNING_CONFIGURATION.Add(KEY_DEBUG_ENABLED, VALUE_DEBUG_ENABLED);
+            RUNNING_CONFIGURATION.Add(KEY_EDI_INSTALLED, VALUE_EDI_INSTALLED);
+            RUNNING_CONFIGURATION.Add(KEY_ATI_INSTALLED, VALUE_ATI_INSTALLED);
+
+            INITIALIZED = true;
         }
         void Init()
         {
-            
+
+
             debugMessages = new List<string>();
             debugger = new List<IMyTextPanel>();
             InitRoles();
             _FindDebugScreen();
-            _FindMyself();
+            _FindMyseLF();
             assemblers = new List<IMyAssembler>();
             refineries = new List<IMyRefinery>();
             sorters = new List<IMyConveyorSorter>();
@@ -526,7 +496,7 @@ namespace core
             missiles = new List<IMyLargeMissileTurret>();
             turrets = new List<IMyLargeInteriorTurret>();
             _FindConfigScreen();
-            installEnabled = true;
+            INSTALL_ENABLED = true;
 
         }
         void GetBlocks()
@@ -538,7 +508,7 @@ namespace core
                 if (_blocks[i].CustomName.Contains(platformID))
                 {
                     ///////////////////// GETTING ASSEMBLERS /////////////////////
-                    if (_blocks[i].CustomName.Contains(assemblerID))
+                    if (_blocks[i].CustomName.Contains(ASSEMBLER_ID))
                     {
                         IMyAssembler _assembler = (IMyAssembler)_blocks[i];
                         assemblers.Add(_assembler);
@@ -546,7 +516,7 @@ namespace core
                         production.Add(_assembler.GetInventory(1));
                     }
                     ////////////////////// GETTING REFINERIES //////////////////////
-                    if (_blocks[i].CustomName.Contains(refineryID))
+                    if (_blocks[i].CustomName.Contains(REFINERY_ID))
                     {
                         IMyRefinery _refinery = (IMyRefinery)_blocks[i];
                         refineries.Add(_refinery);
@@ -554,66 +524,66 @@ namespace core
                         production.Add(_refinery.GetInventory(1));
                     }
                     ////////////////// GETTING CONVEYOR SORTERS /////////////////
-                    if (_blocks[i].CustomName.Contains(sorterID))
+                    if (_blocks[i].CustomName.Contains(SORTER_ID))
                         sorters.Add((IMyConveyorSorter)_blocks[i]);
                     /////////////////////// GETTING BATTERIES //////////////////////
-                    if (_blocks[i].CustomName.Contains(batteryID))
+                    if (_blocks[i].CustomName.Contains(BATTERY_ID))
                         batteries.Add((IMyBatteryBlock)_blocks[i]);
                     /////////////////////// GETTING REACTORS //////////////////////
-                    if (_blocks[i].CustomName.Contains(reactorID))
+                    if (_blocks[i].CustomName.Contains(REACTOR_ID))
                     {
                         IMyReactor _reactor = (IMyReactor)_blocks[i];
                         reactors.Add(_reactor);
                         storage.Add(_reactor.GetInventory(0));
                     }
                     /////////////////////// GETTING OXYGENS //////////////////////
-                    if (_blocks[i].CustomName.Contains(oxygenID))
+                    if (_blocks[i].CustomName.Contains(OXYGEN_ID))
                     {
                         IMyOxygenGenerator _oxygen = (IMyOxygenGenerator)_blocks[i];
                         oxygens.Add(_oxygen);
                     }
                     ////////////////////// GETTING OXYTANKS //////////////////////
-                    if (_blocks[i].CustomName.Contains(oxyTankID))
+                    if (_blocks[i].CustomName.Contains(OXY_TANK_ID))
                     {
                         IMyOxygenTank _oxytank = (IMyOxygenTank)_blocks[i];
                         oxytanks.Add(_oxytank);
                     }
-                    /////////////////////// GETTING AIRVENTS ////////////////////// 
-                    if (_blocks[i].CustomName.Contains(airVentID))
+                    /////////////////////// GETTING AIRVENTS //////////////////////
+                    if (_blocks[i].CustomName.Contains(AIR_VENT_ID))
                     {
                         IMyAirVent _vent = (IMyAirVent)_blocks[i];
                         airvents.Add(_vent);
                     }
                     ///////////////////// GETTING INVENTORIES /////////////////////
-                    if (_blocks[i].CustomName.Contains(storageID))
+                    if (_blocks[i].CustomName.Contains(STORAGE_ID))
                         storage.Add(((IMyInventoryOwner)_blocks[i]).GetInventory(0));
                     /////////////////// GETTING INTERIOR LIGHTS ////////////////////
-                    if (_blocks[i].CustomName.Contains(lightID))
+                    if (_blocks[i].CustomName.Contains(LIGHT_ID))
                         lights.Add((IMyInteriorLight)_blocks[i]);
                     /////////////////// GETTING SOUND BLOCKS ////////////////////
-                    if (_blocks[i].CustomName.Contains(speakerID))
+                    if (_blocks[i].CustomName.Contains(SPEAKER_ID))
                         speakers.Add((IMySoundBlock)_blocks[i]);
                     /////////////////////// GETTING DOORS //////////////////////////
-                    if (_blocks[i].CustomName.Contains(doorID))
+                    if (_blocks[i].CustomName.Contains(DOOR_ID))
                         doors.Add((IMyDoor)_blocks[i]);
-                    ///////////////////// GETTING SENSORS ////////////////////////// 
-                    if (_blocks[i].CustomName.Contains(sensorID))
+                    ///////////////////// GETTING SENSORS //////////////////////////
+                    if (_blocks[i].CustomName.Contains(SENSOR_ID))
                         sensors.Add((IMySensorBlock)_blocks[i]);
                     ///////////////////// GETTING TERMINALS ///////////////////////
-                    if (_blocks[i].CustomName.Contains(terminalID))
+                    if (_blocks[i].CustomName.Contains(TERMINAL_ID))
                         terminals.Add(_blocks[i]);
                     ///////////////////// GETTING TEXT PANELS /////////////////////
-                    if (_blocks[i].CustomName.Contains(panelID))
+                    if (_blocks[i].CustomName.Contains(PANEL_ID))
                     {
                         IMyTextPanel _panel = (IMyTextPanel)_blocks[i];
-                        if (_panel.GetPublicTitle().Contains(debugID))
+                        if (_panel.GetPublicTitle().Contains(SIOS_DEBUG_SCREEN_ID))
                         {
                             debugger.Add(_panel);
-                            debugEnabled = true;
+                            DEBUG_ENABLED = true;
                         }
                         else
                         {
-                            if (!_panel.CustomName.Contains(configID) && _panel.GetPublicTitle() == infoID)
+                            if (!_panel.CustomName.Contains(SIOS_CONFIG_SCREEN_ID) && _panel.GetPublicTitle() == INFO_ID)
                             {
                                 _panel.ShowPublicTextOnScreen();
                                 _panel.SetValue("FontSize", 0.8f);
@@ -622,22 +592,22 @@ namespace core
                         }
                     }
                     ////////////////////// GETTING PROGRAMS //////////////////////
-                    if (_blocks[i].CustomName.Contains(programID))
+                    if (_blocks[i].CustomName.Contains(PROGRAM_ID))
                     {
                         IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
-                        if (_program.CustomName.Contains(coreID))
+                        if (_program.CustomName.Contains(SYOS_PROGRAMBLOCK_ID))
                             core = _program;
-                        else if (_program.CustomName.Contains(EDIID))
+                        else if (_program.CustomName.Contains(SYOS_ADDON_EDI_ID))
                             EDI = _program;
-                        else if (_program.CustomName.Contains(traderID))
+                        else if (_program.CustomName.Contains(TRADER_ID))
                             traders.Add(_program);
                         else
                             programs.Add(_program);
                     }
                     ///////////////////// GETTING TIMERBLOCKS ////////////////////
-                    if (_blocks[i].CustomName.Contains(timerID))
+                    if (_blocks[i].CustomName.Contains(TIMER_ID))
                     {
-                        if (_blocks[i].CustomName.Contains(updateID))
+                        if (_blocks[i].CustomName.Contains(UPDATE_ID))
                         {
                             IMyTimerBlock _update = (IMyTimerBlock)_blocks[i];
                             _update.GetActionWithName("Start").Apply(_update);
@@ -646,22 +616,22 @@ namespace core
                             timers.Add((IMyTimerBlock)_blocks[i]);
                     }
                     /////////////////// GETTING GATLING TURRETS /////////////////
-                    if (_blocks[i].CustomName.Contains(gatlingID))
+                    if (_blocks[i].CustomName.Contains(GATTLING_TURRET_ID))
                     {
                         gatlings.Add((IMyLargeGatlingTurret)_blocks[i]);
                     }
-                    if (_blocks[i].CustomName.Contains(missileID))
+                    if (_blocks[i].CustomName.Contains(MISSILE_TURRET_ID))
                     {
                         missiles.Add((IMyLargeMissileTurret)_blocks[i]);
                     }
-                    if (_blocks[i].CustomName.Contains(turretID))
+                    if (_blocks[i].CustomName.Contains(TURRET_ID))
                     {
                         turrets.Add((IMyLargeInteriorTurret)_blocks[i]);
                     }
                 }
             }
             Debug("Found: " + lights.Count + " lights");
-            booted = true;
+            BOOTED = true;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                   AUTO INSTALLATION                                                                     */
@@ -675,69 +645,69 @@ namespace core
             for (int i = 0; i < _blockList.Count; i++)
             {
                 _oldName = _blockList[i].CustomName;
-                _blockTextEnd = suffix + empty + _oldName;
+                _blockTextEnd = SUFFIX + BLANK + _oldName;
                 if (!_oldName.Contains(platformID))
                 {
                     switch (_blocktype)
                     {
                         case "IMyAssembler":
-                            _blockText = _blockText + assemblerID + divider + productionID + _blockTextEnd; break;
+                            _blockText = _blockText + ASSEMBLER_ID + DIVIDER + PRODUCTION_ID + _blockTextEnd; break;
                         case "IMyRefinery":
-                            _blockText = _blockText + refineryID + divider + productionID + _blockTextEnd; break;
+                            _blockText = _blockText + REFINERY_ID + DIVIDER + PRODUCTION_ID + _blockTextEnd; break;
                         case "IMyConveyorSorter":
-                            _blockText = _blockText + sorterID + divider + storageID + _blockTextEnd; break;
+                            _blockText = _blockText + SORTER_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyBatteryBlock":
-                            _blockText = _blockText + batteryID + divider + gravityID + _blockTextEnd; break;
+                            _blockText = _blockText + BATTERY_ID + DIVIDER + GRAVITY_ID + _blockTextEnd; break;
                         case "IMyGravityGenerator":
-                            _blockText = _blockText + gravityID + _blockTextEnd; break;
+                            _blockText = _blockText + GRAVITY_ID + _blockTextEnd; break;
                         case "IMyReactor":
-                            _blockText = _blockText + reactorID + divider + storageID + _blockTextEnd; break;
+                            _blockText = _blockText + REACTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyOxygenGenerator":
-                            _blockText = _blockText + oxygenID + _blockTextEnd; break;
+                            _blockText = _blockText + OXYGEN_ID + _blockTextEnd; break;
                         case "IMyOxygenFarm":
-                            _blockText = _blockText + oxyFarmID + _blockTextEnd; break;
+                            _blockText = _blockText + OXY_FARM_ID + _blockTextEnd; break;
                         case "IMyOxygenTank":
-                            _blockText = _blockText + oxyTankID + _blockTextEnd; break;
+                            _blockText = _blockText + OXY_TANK_ID + _blockTextEnd; break;
                         case "IMyAirVent":
-                            _blockText = _blockText + airVentID + divider + "$" + airVentCnt.ToString("0000") + _blockTextEnd;
+                            _blockText = _blockText + AIR_VENT_ID + DIVIDER + "$" + airVentCnt.ToString("0000") + _blockTextEnd;
                             airVentCnt++;
                             break;
                         case "IMyCargoContainer":
-                            _blockText = _blockText + cargoID + divider + storageID + _blockTextEnd; break;
+                            _blockText = _blockText + CARGO_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyShipConnector":
-                            _blockText = _blockText + connectorID + divider + storageID + _blockTextEnd; break;
+                            _blockText = _blockText + CONNECTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyCollector":
-                            _blockText = _blockText + collectorID + divider + storageID + _blockTextEnd; break;
+                            _blockText = _blockText + COLLECTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMySoundBlock":
-                            _blockText = _blockText + speakerID + _blockTextEnd; break;
+                            _blockText = _blockText + SPEAKER_ID + _blockTextEnd; break;
                         case "IMyInteriorLight":
                             string _color = ((IMyInteriorLight)_blockList[i]).GetValue<Color>("Color").ToString();
-                            _blockText = _blockText + lightID + divider + _color + _blockTextEnd;
+                            _blockText = _blockText + LIGHT_ID + DIVIDER + _color + _blockTextEnd;
                             break;
                         case "IMyDoor":
-                            _blockText = _blockText + doorID + _blockTextEnd; break;
+                            _blockText = _blockText + DOOR_ID + _blockTextEnd; break;
                         case "IMySensorBlock":
-                            _blockText = _blockText + sensorID + _blockTextEnd; break;
+                            _blockText = _blockText + SENSOR_ID + _blockTextEnd; break;
                         case "IMyButtonPanel":
-                            _blockText = _blockText + terminalID + _blockTextEnd; break;
+                            _blockText = _blockText + TERMINAL_ID + _blockTextEnd; break;
                         case "IMyShipController":
-                            _blockText = _blockText + terminalID + _blockTextEnd; break;
+                            _blockText = _blockText + TERMINAL_ID + _blockTextEnd; break;
                         case "IMyTextPanel":
-                            //_blockText = _blockText + panelID + _blockTextEnd; 
+                            //_blockText = _blockText + PANEL_ID + _blockTextEnd;
                             _blockText = _oldName;
                             break;
                         case "IMyProgrammableBlock":
-                            //_blockText = _blockText + programID + _blockTextEnd; break;
+                            //_blockText = _blockText + PROGRAM_ID + _blockTextEnd; break;
                             _blockText =_oldName;
                             break;
                         case "IMyTimerBlock":
-                            _blockText = _blockText + timerID + _blockTextEnd; break;
+                            _blockText = _blockText + TIMER_ID + _blockTextEnd; break;
                         case "IMyLargeGatlingTurret":
-                            _blockText = _blockText + gatlingID + _blockTextEnd; break;
+                            _blockText = _blockText + GATTLING_TURRET_ID + _blockTextEnd; break;
                         case "IMyLargeMissileTurret":
-                            _blockText = _blockText + missileID + _blockTextEnd; break;
+                            _blockText = _blockText + MISSILE_TURRET_ID + _blockTextEnd; break;
                         case "IMyLargeInteriorTurret":
-                            _blockText = _blockText + turretID + _blockTextEnd; break;
+                            _blockText = _blockText + TURRET_ID + _blockTextEnd; break;
                         default:
                             _blockText = _blockText + " Unknown Block" + DIVIDER + _oldName + _blockTextEnd; break;
                     }
@@ -800,7 +770,7 @@ namespace core
             _blocks = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyCollector>(_blocks);
             _FormatBlock(_blocks, "IMyCollector");
-            ///////////////////// INSTALL SOUNDBLOCKS ///////////////////// 
+            ///////////////////// INSTALL SOUNDBLOCKS /////////////////////
             _blocks = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMySoundBlock>(_blocks);
             _FormatBlock(_blocks, "IMySoundBlock");
@@ -849,7 +819,7 @@ namespace core
             GridTerminalSystem.GetBlocksOfType<IMyLargeInteriorTurret>(_blocks);
             _FormatBlock(_blocks, "IMyLargeInteriorTurret");
             // JUST ADD NEW LINES FOR NEW BLOCKTYPES
-            installEnabled = true;
+            INSTALL_ENABLED = true;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                       DEINSTALLATION                                                                       */
@@ -866,8 +836,8 @@ namespace core
                 string _name = _blocks[i].CustomName;
                 if (_name.Contains(platformID))
                 {
-                    string[] _temp = _name.Split(suffix);
-                    if (_temp[1].StartsWith(empty))
+                    string[] _temp = _name.Split(SUFFIX);
+                    if (_temp[1].StartsWith(BLANK))
                         _temp[1] = _temp[1].Substring(1);
                     _name = "";
                     for (int a = 1; a < _temp.Length; a++)
@@ -877,7 +847,7 @@ namespace core
                     _blocks[i].SetCustomName(_name);
                 }
             }
-            installEnabled = false;
+            INSTALL_ENABLED = false;
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                           EXTERNAL DATA PROCESSING                                                            */
@@ -887,34 +857,34 @@ namespace core
             // Load from screen
             string _file = config.GetPublicText();
             Debug(config.GetPublicText());
-            string[] lines = _file.Split(configDivider);
+            string[] lines = _file.Split(CONFIG_DIVIDER);
             for (int i = 0; i < lines.Length; i++)
             {
-                string[] row = lines[i].Split(configSeparator);
-                if (configDict.ContainsKey(row[0]))
-                    configDict[row[0]] = row[1].Trim();
+                string[] row = lines[i].Split(CONFIG_SEPARATOR);
+                if (RUNNING_CONFIGURATION.ContainsKey(row[0]))
+                    RUNNING_CONFIGURATION[row[0]] = row[1].Trim();
             }
             Debug(config.GetPublicText());
             StoreExternalConfigData();
-        
+
 
         }
         void StoreExternalConfigData()
         {
             // write to screen
             string _file;
-            _file = KEY_PLATTFORM_ID + ":" + configDict[KEY_PLATTFORM_ID] + empty + configDivider + blank;
-            _file += KEY_PLATFORM_ROLE_ID + ":" + configDict[KEY_PLATFORM_ROLE_ID] + empty + configDivider + blank;
-            _file += KEY_CONDITION + ":" + configDict[KEY_CONDITION] + empty + configDivider + blank;
-            _file += KEY_INSTALL_ENABLED + ":" + configDict[KEY_INSTALL_ENABLED] + empty + configDivider + blank;
-            _file += KEY_HIDE_VERSION_INFO + ":" + configDict[KEY_HIDE_VERSION_INFO] + empty + configDivider + blank;
-            _file += KEY_ALLOW_BEACON_RENAME + ":" + configDict[KEY_ALLOW_BEACON_RENAME] + empty + configDivider + blank;
-            _file += KEY_ACTIVATE_SECURITY + ":" + configDict[KEY_ACTIVATE_SECURITY] + empty + configDivider + blank;
-            _file += KEY_LCD_BG_COLOR + ":" + configDict[KEY_LCD_BG_COLOR] + empty + configDivider + blank;
-            _file += KEY_LCD_FONT_COLOR + ":" + configDict[KEY_LCD_FONT_COLOR] + empty + configDivider + blank;
-            _file += KEY_DEBUG_ENABLED + ":" + configDict[KEY_DEBUG_ENABLED] + empty + configDivider + blank;
-            _file += KEY_EDI_INSTALLED + ":" + configDict[KEY_EDI_INSTALLED] + empty + configDivider + blank;
-            _file += KEY_ATI_INSTALLED + ":" + configDict[KEY_ATI_INSTALLED] + empty + configDivider + blank;
+            _file = KEY_PLATTFORM_ID + ":" + RUNNING_CONFIGURATION[KEY_PLATTFORM_ID] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_PLATFORM_ROLE_ID + ":" + RUNNING_CONFIGURATION[KEY_PLATFORM_ROLE_ID] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_CONDITION + ":" + RUNNING_CONFIGURATION[KEY_CONDITION] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_INSTALL_ENABLED + ":" + RUNNING_CONFIGURATION[KEY_INSTALL_ENABLED] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_HIDE_VERSION_INFO + ":" + RUNNING_CONFIGURATION[KEY_HIDE_VERSION_INFO] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_ALLOW_BEACON_RENAME + ":" + RUNNING_CONFIGURATION[KEY_ALLOW_BEACON_RENAME] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_ACTIVATE_SECURITY + ":" + RUNNING_CONFIGURATION[KEY_ACTIVATE_SECURITY] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_LCD_BG_COLOR + ":" + RUNNING_CONFIGURATION[KEY_LCD_BG_COLOR] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_LCD_FONT_COLOR + ":" + RUNNING_CONFIGURATION[KEY_LCD_FONT_COLOR] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_DEBUG_ENABLED + ":" + RUNNING_CONFIGURATION[KEY_DEBUG_ENABLED] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_EDI_INSTALLED + ":" + RUNNING_CONFIGURATION[KEY_EDI_INSTALLED] + BLANK + CONFIG_DIVIDER + LF;
+            _file += KEY_ATI_INSTALLED + ":" + RUNNING_CONFIGURATION[KEY_ATI_INSTALLED] + BLANK + CONFIG_DIVIDER + LF;
             config.WritePublicText(_file);
 
         }
@@ -939,7 +909,7 @@ namespace core
             Debug("New Condition: [" + _condition + "]");
             Debug("Switching Lights: " + lights.Count);
 
-            if (!booted)
+            if (!BOOTED)
                 GetBlocks();
             Color lcdBGColor = new Color(0, 0, 0);
             Color fontColor = new Color(255, 255, 255);
@@ -953,7 +923,7 @@ namespace core
                     {
                         string _name = lights[i].CustomName;
                         string[] _temp = _name.Split('}');
-                        _temp[0] = _temp[0].Replace(prefix + platformID + divider + lightID + divider, "").Replace("{", "");
+                        _temp[0] = _temp[0].Replace(PREFIX + platformID + DIVIDER + LIGHT_ID + DIVIDER, "").Replace("{", "");
                         string[] _colors = _temp[0].Split(' ');
                         _colors[0] = _colors[0].Replace("R:", "");
                         _colors[1] = _colors[1].Replace("G:", "");
@@ -1026,7 +996,7 @@ namespace core
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         void Debug(string _msg)
         {
-            debugMessages.Add(GetTimeStamp() + ": " + _msg + blank);
+            debugMessages.Add(GetTimeStamp() + ": " + _msg + LF);
         }
         void DisplayDebug()
         {
@@ -1051,16 +1021,19 @@ namespace core
                 Debug(ex.ToString());
             }
         }
-
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /*                                                                          API                                                                              */
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         // if a Argument starts with API:
         void ProcessAPIArgument(string _argument)
         {
             Debug(_argument);
             _argument = _argument.ToLower();
-            if (_argument.Contains("api: edi logon")) {
-                ediInstalled = true;
-                StoreExternalConfigData();                                            
+            if (dictionary.ContainsKey(argument)){
+
+            } else {
+                Debug("Argument is not a valid API Command")
             }
-        } 
+        }
    }
 }
