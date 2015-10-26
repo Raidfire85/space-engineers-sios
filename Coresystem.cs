@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using VRage;
 using VRageMath;
 using CoreOs;
+using System.Collections;
 
 namespace core
 {
@@ -21,15 +22,16 @@ namespace core
         /// 
         // To use an EXTERNAL CONFIG SCREEN you have to rename one LCD on your GRID with the following ID 
         // (and only with this ID!)
-        const string configID = "$IOS Config";
+        const string configID = "_SIOS_Config_";
         // To use a Debugger Screen you have to set the desired Screens PUBLIC TITLE to the following ID:
-        const string debugID = "$IOS <CORE> Debug";
+        const string debugID = "_SIOS_CORE_Debug_";
         ///<SUMMARY>
         // Mandatory Blockname of your Mainframe
-        const string coreID = "$IOS <CORE> MAINFRAME";
+        const string coreID = "_SIOS_CORE_MAINFRAME_";
         // Mandatory Blockname of your EDI Defence Mainframe
-        const string EDIID = "$IOS <EDI> ADDON";
+        const string EDIID = "_SIOS_EDI_ADDON_";
 
+        Dictionary<string, string> configDict;
 
         const string creator = "Mahtrok";
         const string cocreator = "cccdemon";
@@ -152,8 +154,11 @@ namespace core
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         const char divider = '|';
         const char DIVIDER = '|';
+
         const char listDivider = ',';
         const char configDivider = '$';
+        const char configSeparator = ':';
+
         const char suffix = ']';
         const char SUFFIX = ']';
         const string prefix = "[";
@@ -163,6 +168,63 @@ namespace core
         bool securityActive = false;
         bool initialized = false;
         bool enabled = true;
+
+        /// <Command API>
+        const string API_RAISE_ALARM = "API_RAISE_ALARM";
+        const string API_DISABLE_ALARM = "API_DISABLE_ALARM";
+        const string API_SHUTDOWN_SHIP = "API_SHUTDOWN_SHIP";
+        const string API_BOOT_SHIP = "API_BOOT_SHIP";
+        const string API_DISABLE_BLOCK = "API_DISABLE_BLOCK";
+        const string API_ENABLE_BLOCK = "API_ENABLE_BLOCK";
+        const string API_ATTACK_DETECTED = "API_ATTACK_DETECTED";
+        const string API_ATTACK_DEFENDET = "API_ATTACK_DEFENDET";
+        const string API_COLLISION_ALERT = "API_ATTACK_DEFENDET";
+        const string API_STATUS_GREEN = "API_STATUS_GREEN";
+        const string API_STATUS_ORANGE = "API_STATUS_ORANGE";
+        const string API_STATUS_RED = "API_STATUS_RED";
+        const string API_CANT_PRESURISE = "API_CANT_PRESURISE";
+
+        const string API_EDI_LOGON = "API_EDI_LOGON";
+        const string API_EDI_LOGOFF = "API_EDI_LOGOFF";
+
+        const string API_TVI_LOGON = "API_TVI_LOGON";
+        const string API_TVI_LOGOFF = "API_TVI_LOGOFF";
+
+        const string API_COM_LOGON = "API_COM_LOGON";
+        const string API_COM_LOGOFF = "API_COM_LOGOFF ";
+        /// </Command API>
+
+        /// Config Text Consts
+        const string KEY_PLATTFORM_ID = "C_PLATTFORM_ID";
+        const string KEY_PLATFORM_ROLE_ID = "C_PLATFORM_ROLE_ID";
+        const string KEY_CONDITION = "C_CONDITION";
+        const string KEY_INSTALL_ENABLED = "C_INSTALL_ENABLED";
+        const string KEY_HIDE_VERSION_INFO = "C_HIDE_VERSION_INFO";
+        const string KEY_ALLOW_BEACON_RENAME = "C_ALLOW_BEACON_RENAME";
+        const string KEY_ACTIVATE_SECURITY = "C_ACTIVATE_SECURITY";
+        const string KEY_LCD_BG_COLOR = "C_LCD_BG_COLOR";
+        const string KEY_LCD_FONT_COLOR = "C_LCD_FONT_COLOR";
+        const string KEY_DEBUG_ENABLED = "C_DEBUG_ENABLED";
+        const string KEY_EDI_INSTALLED = "C_EDI_INSTALLED";
+        const string KEY_ATI_INSTALLED = "C_ATI_INSTALLED";
+
+        
+        string VALUE_PLATTFORM_ID = "0";
+        string VALUE_PLATFORM_ROLE_ID = "0";
+        string VALUE_CONDITION = "greed";
+        string VALUE_INSTALL_ENABLED = "false";
+        string VALUE_HIDE_VERSION_INFO = "true";
+        string VALUE_ALLOW_BEACON_RENAME = "false";
+        string VALUE_ACTIVATE_SECURITY = "false";
+        string VALUE_LCD_BG_COLOR = "40,40,40";
+        string VALUE_LCD_FONT_COLOR = "255,255,255";
+        string VALUE_DEBUG_ENABLED = "false";
+        string VALUE_EDI_INSTALLED = "false";
+        string VALUE_ATI_INSTALLED = "false";
+
+
+
+
         List<string> debugMessages;
         List<IMyAssembler> assemblers;
         List<IMyRefinery> refineries;
@@ -248,10 +310,27 @@ namespace core
         }
         void Main(string argument)
         {
+
+            if (argument == "reinstall") {
+               initialized = false;
+            }
+                
             ///////////////////// INITIALIZATION /////////////////////
-            if (!initialized || argument != "")
+            if (!initialized) {
+                _generateConfig();
                 Init();
-            if (enabled)
+                Debug("System Initialized");
+            }
+            ////////////////////// DEBUGGER ///////////////////////
+            if (debugEnabled)
+                DisplayDebug();
+            if (argument == "reload")
+            {
+                LoadExternalConfigData();
+            }
+
+
+            /*if (enabled)
             {
                 if (argument != "")
                     ProcessArgument(argument);
@@ -267,11 +346,8 @@ namespace core
             StoreExternalConfigData();
             /////////////////////// DISPLAY /////////////////////////
             Display();
-            ////////////////////// DEBUGGER ///////////////////////
-            if (debugEnabled)
-                DisplayDebug();
             ///////////////////// RESET SCRIPT ////////////////////
-            Reset();
+            Reset();*/
         }
         void ProcessArgument(string _argument)
         {
@@ -347,70 +423,86 @@ namespace core
         ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
         /*                                                                       INITIALIZATION                                                                           */
         ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-        void _FindRecommeredScreens()
+        void _FindDebugScreen()
         {
             List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
-            GridTerminalSystem.SearchBlocksOfName(debugID, _debugs);
-            if (_debugs.Count > 0)
-            {
-                debugger.Add((IMyTextPanel)_debugs[0]);
-                debugEnabled = true;
-            }
-            List<IMyTerminalBlock> _configScreens = new List<IMyTerminalBlock>();
-//            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_configScreens);
-            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_configScreens);
-            int _screens = 0;
-            Debug("Screens found:" + _configScreens.Count);
-            for (int i = 0; i < _configScreens.Count; i++)
-            {
-                if (_configScreens[i].CustomName.Contains(configID)) {
-                    _screens++;
-                    config = (IMyTextPanel)_configScreens[i];
-                    Debug("ConfigScreen found who contains the name:" + configID);
-                    if (_screens > 1)
+            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_debugs);
+                for (int i = 0; i < _debugs.Count; i++)
+                {
+                    if (_debugs[i].CustomName.Contains(debugID))
                     {
-                        enabled = false;
-                        Debug("==============================================");
-                        Debug("CRITICAL ERROR: Detected more then 1 $IOS config!");
-                        Debug("Please rename or undock every $IOS config, but the ");
-                        Debug("One belonging to this Station!");
-                        Debug("==============================================");
-                        Debug("Program has been halted.");
-
-                    } else {
-                        if (config == null)
-                        {
-                            Debug("No external config file found.");
-                            if (platformID == "")
-                                platformID = GetRandomPlatformID().ToString();
-                        }
-                        else
-                        {
-                            if (enabled)
-                            {
-                                Debug("External config file found! Loading DATA...");
-                                LoadExternalConfigData();
-                            }
-                            else
-                            {
-                                Debug("Program has been halted.");
-                            }
-                            config = (IMyTextPanel)_configScreens[0];
-                            config.ShowPublicTextOnScreen();
-                            //config.SetValue("BackgroundColor", panelDefaultBG);
-                            //config.SetValue("FontColor", panelDefaultFC);
-                            //config.SetValue("FontSize", 0.8f);
-                            initialized = true;
-                        }
+                        debugger.Add((IMyTextPanel)_debugs[i]);
+                        VALUE_DEBUG_ENABLED = true.ToString();
+                        debugEnabled = true;
                     }
                 }
+        }
+
+        void _FindConfigScreen()
+        {
+            int _screens = 0;
+            List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
+            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_blocks);
+            Debug("Textpanels found: " + _blocks.Count);
+            for (int i = 0; i < _blocks.Count; i++)
+            {
+                Debug("Found Textpanel with name: " + _blocks[i].CustomName);
+                if (_blocks[i].CustomName.Contains(configID))
+                {
+                    Debug("Textpanels which contains configID: " + configID);
+                    _screens++; // there should`nt be more than 1!
+                    config = (IMyTextPanel)_blocks[i];
+                    StoreExternalConfigData();
+                    config.SetValue("BackgroundColor", panelDefaultBG);
+                    config.SetValue("FontColor", panelDefaultFC);
+                    config.SetValue("FontSize", 0.8f);
+
+                }
             }
+            if (_screens == 0) Debug("No Configscreen found");
             
+            if (_screens > 1) Debug("WARNING: TO MANY CONFIGSCREENS FOUND");
+            
+        }
+        void _FindMyself() {
+           List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
+
+            GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_blocks);
+            for (int i = 0; i < _blocks.Count; i++)
+            {
+                if (_blocks[i].CustomName.Contains(coreID))
+                {
+                    core = (IMyProgrammableBlock)_blocks[i];
+                    Debug("Found myself - Generating awareness - I know who I am. I am!");
+                }
+            }
+        }
+        void _generateConfig() 
+        {
+            configDict = new Dictionary<string, string>();
+            configDict.Add(KEY_PLATTFORM_ID, VALUE_PLATTFORM_ID);
+            configDict.Add(KEY_PLATFORM_ROLE_ID, VALUE_PLATFORM_ROLE_ID);
+            configDict.Add(KEY_CONDITION, VALUE_CONDITION );
+            configDict.Add(KEY_INSTALL_ENABLED, VALUE_INSTALL_ENABLED);
+            configDict.Add(KEY_HIDE_VERSION_INFO, VALUE_HIDE_VERSION_INFO);
+            configDict.Add(KEY_ALLOW_BEACON_RENAME, VALUE_ALLOW_BEACON_RENAME);
+            configDict.Add(KEY_ACTIVATE_SECURITY, VALUE_ACTIVATE_SECURITY);
+            configDict.Add(KEY_LCD_BG_COLOR, VALUE_LCD_BG_COLOR);
+            configDict.Add(KEY_LCD_FONT_COLOR, VALUE_LCD_FONT_COLOR);
+            configDict.Add(KEY_DEBUG_ENABLED, VALUE_DEBUG_ENABLED);
+            configDict.Add(KEY_EDI_INSTALLED, VALUE_EDI_INSTALLED);
+            configDict.Add(KEY_ATI_INSTALLED, VALUE_ATI_INSTALLED);
+            
+            initialized = true;
         }
         void Init()
         {
+            
             debugMessages = new List<string>();
+            debugger = new List<IMyTextPanel>();
             InitRoles();
+            _FindDebugScreen();
+            _FindMyself();
             assemblers = new List<IMyAssembler>();
             refineries = new List<IMyRefinery>();
             sorters = new List<IMyConveyorSorter>();
@@ -427,16 +519,13 @@ namespace core
             doors = new List<IMyDoor>();
             terminals = new List<IMyTerminalBlock>();
             panels = new List<IMyTextPanel>();
-            debugger = new List<IMyTextPanel>();
             programs = new List<IMyProgrammableBlock>();
             traders = new List<IMyProgrammableBlock>();
             timers = new List<IMyTimerBlock>();
             gatlings = new List<IMyLargeGatlingTurret>();
             missiles = new List<IMyLargeMissileTurret>();
             turrets = new List<IMyLargeInteriorTurret>();
-            if (!VSTUDIO) {
-                _FindRecommeredScreens();
-            }
+            _FindConfigScreen();
             installEnabled = true;
 
         }
@@ -795,128 +884,39 @@ namespace core
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         void LoadExternalConfigData()
         {
+            // Load from screen
             string _file = config.GetPublicText();
-            if (_file.Contains(configDivider.ToString()))
+            Debug(config.GetPublicText());
+            string[] lines = _file.Split(configDivider);
+            for (int i = 0; i < lines.Length; i++)
             {
-                string[] _data = _file.Split(configDivider);
-                //////////////////////// GETTING PLATFORM ID ////////////////////////////
-                if (_data.Length > 1)
-                    platformID = _data[1].Replace("platformID: ", "").Replace(blank, "");
-                if (platformID == "")
-                {
-                    platformID = GetRandomPlatformID().ToString();
-                    _data[1] = "platformID: " + platformID;
-                    StoreExternalConfigData();
-                }
-                Debug("PlatformID: " + platformID);
-                ///////////////////// GETTING PLATFORM ROLE ID /////////////////////////
-                if (_data.Length > 2)
-                {
-                    platformRoleID = int.Parse(_data[2].Replace("platformRoleID: ", "").Replace(blank, ""));
-                    if (platformRoles.Count > platformRoleID && platformRoleID >= 0)
-                        Debug("Platform Role ID: " + platformRoleID.ToString() + tab + "<" + platformRoles[platformRoleID].ID + ">");
-                    else
-                        Debug("Platform Role ID: " + platformRoleID.ToString());
-                }
-                //////////////////// GETTING CURRENT CONDITION /////////////////////////
-                if (_data.Length > 3)
-                    condition = _data[3].Replace("condition: ", "").Replace(blank, "");
-                Debug("Condition: " + condition);
-                if (_data.Length > 4)
-                {
-                    ////////////////////// GETTING INSTALL ENABLED /////////////////////////
-                    if (_data[4].ToLower().Contains("true") || _data[4].ToLower().Contains("yes"))
-                        installEnabled = true;
-                    else
-                        installEnabled = false;
-                    Debug("Install Enabled: " + installEnabled.ToString());
-                }
-                else    ///////////////////////// CORRECTING FORMAT
-                    StoreExternalConfigData();
-                if (_data.Length > 5)
-                {
-                    ///////////////////// GETTING HIDE VERSION INFO ////////////////////////
-                    if (_data[5].ToLower().Contains("true") || _data[5].ToLower().Contains("yes"))
-                        hideVersionInfoOnScreen = true;
-                    else
-                        hideVersionInfoOnScreen = false;
-                    Debug("Hide Version Info: " + hideVersionInfoOnScreen.ToString());
-                }
-                else    ///////////////////////// CORRECTING FORMAT
-                    StoreExternalConfigData();
-                if (_data.Length > 6)
-                {
-                    /////////////////// GETTING ALLOW BEACON RENAME //////////////////////
-                    if (_data[6].ToLower().Contains("true") || _data[6].ToLower().Contains("yes"))
-                        allowBeaconRename = true;
-                    else
-                        allowBeaconRename = false;
-                    Debug("Allow beacon rename: " + allowBeaconRename.ToString());
-                }
-                else    ///////////////////////// CORRECTING FORMAT
-                    StoreExternalConfigData();
-                if (_data.Length > 7)
-                {
-                    /////////////////// GETTING SECURITY ACTIVE //////////////////////
-                    if (_data[7].ToLower().Contains("true") || _data[7].ToLower().Contains("yes"))
-                        securityActive = true;
-                    else
-                        securityActive = false;
-                    Debug("securityActive: " + securityActive.ToString());
-                }
-                else    ///////////////////////// CORRECTING FORMAT
-                    StoreExternalConfigData();
-                if (_data.Length > 9)
-                {
-                    ///////////////////////// GET DEFAULT PANEL BG COLOR
-                    string[] _temp = _data[8].Split('}');
-                    _temp[0] = _temp[0].Replace("LCD BG Color: {", "");
-                    string[] _colors = _temp[0].Split(' ');
-                    _colors[0] = _colors[0].Replace("R:", "");
-                    _colors[1] = _colors[1].Replace("G:", "");
-                    _colors[2] = _colors[2].Replace("B:", "");
-                    panelDefaultBG = new Color(int.Parse(_colors[0]), int.Parse(_colors[1]), int.Parse(_colors[2]));
-                    ///////////////////////// GET DEFAULT PANEL FONT COLOR
-                    _temp = _data[9].Split('}');
-                    _temp[0] = _temp[0].Replace("LCD Font Color: {", "");
-                    _colors = _temp[0].Split(' ');
-                    _colors[0] = _colors[0].Replace("R:", "");
-                    _colors[1] = _colors[1].Replace("G:", "");
-                    _colors[2] = _colors[2].Replace("B:", "");
-                    panelDefaultFC = new Color(int.Parse(_colors[0]), int.Parse(_colors[1]), int.Parse(_colors[2]));
-                }
-                else
-                {
-                    StoreExternalConfigData();
-                }
-                if (_data.Length > 10)
-                {
-                    Debug("Debug Enabled: " + debugEnabled.ToString());
-                }
+                string[] row = lines[i].Split(configSeparator);
+                if (configDict.ContainsKey(row[0]))
+                    configDict[row[0]] = row[1].Trim();
             }
-            else
-            {
-                ///////////////////////// CORRECTING FORMAT
-                StoreExternalConfigData();
-            }
-            SetCondition(condition);
+            Debug(config.GetPublicText());
+            StoreExternalConfigData();
+        
+
         }
         void StoreExternalConfigData()
         {
-            string _file = "$platformID: " + platformID + blank;
-            _file += "$platformRoleID: " + platformRoleID.ToString() + blank;
-            _file += "$condition: " + condition + blank;
-            _file += "$install enabled: " + installEnabled.ToString() + blank;
-            _file += "$hide version info: " + hideVersionInfoOnScreen.ToString() + blank;
-            _file += "$allow beacon rename: " + allowBeaconRename.ToString() + blank;
-            _file += "$activate security: " + securityActive.ToString() + blank;
-            _file += "$LCD BG Color: " + panelDefaultBG + blank;
-            _file += "$LCD Font Color: " + panelDefaultFC + blank;
-            _file += "$Debug Enabled: " + debugEnabled.ToString() + blank;
-            _file += "$EDI INSTALLED: " + ediInstalled.ToString() + blank;
-            _file += "$TMVI INSTALLED: " + tmviInstalled.ToString() + blank;
-
+            // write to screen
+            string _file;
+            _file = KEY_PLATTFORM_ID + ":" + configDict[KEY_PLATTFORM_ID] + empty + configDivider + blank;
+            _file += KEY_PLATFORM_ROLE_ID + ":" + configDict[KEY_PLATFORM_ROLE_ID] + empty + configDivider + blank;
+            _file += KEY_CONDITION + ":" + configDict[KEY_CONDITION] + empty + configDivider + blank;
+            _file += KEY_INSTALL_ENABLED + ":" + configDict[KEY_INSTALL_ENABLED] + empty + configDivider + blank;
+            _file += KEY_HIDE_VERSION_INFO + ":" + configDict[KEY_HIDE_VERSION_INFO] + empty + configDivider + blank;
+            _file += KEY_ALLOW_BEACON_RENAME + ":" + configDict[KEY_ALLOW_BEACON_RENAME] + empty + configDivider + blank;
+            _file += KEY_ACTIVATE_SECURITY + ":" + configDict[KEY_ACTIVATE_SECURITY] + empty + configDivider + blank;
+            _file += KEY_LCD_BG_COLOR + ":" + configDict[KEY_LCD_BG_COLOR] + empty + configDivider + blank;
+            _file += KEY_LCD_FONT_COLOR + ":" + configDict[KEY_LCD_FONT_COLOR] + empty + configDivider + blank;
+            _file += KEY_DEBUG_ENABLED + ":" + configDict[KEY_DEBUG_ENABLED] + empty + configDivider + blank;
+            _file += KEY_EDI_INSTALLED + ":" + configDict[KEY_EDI_INSTALLED] + empty + configDivider + blank;
+            _file += KEY_ATI_INSTALLED + ":" + configDict[KEY_ATI_INSTALLED] + empty + configDivider + blank;
             config.WritePublicText(_file);
+
         }
 
         void Display()
@@ -1052,11 +1052,6 @@ namespace core
             }
         }
 
-
-        void EXT_UpdateDisplay(string _message, string _sender)
-        {
-
-        }
         // if a Argument starts with API:
         void ProcessAPIArgument(string _argument)
         {
@@ -1066,15 +1061,6 @@ namespace core
                 ediInstalled = true;
                 StoreExternalConfigData();                                            
             }
-
-            if (_argument.Contains("api: attack detected"))
-            {
-                Debug("Set AlertCondition: RED"); SetCondition("red");
-            }
-            if (_argument.Contains("api: attack defended"))
-            {
-                Debug("Set AlertCondition: GREEN"); SetCondition("green");
-            }
-        }
-    }
+        } 
+   }
 }

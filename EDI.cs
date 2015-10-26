@@ -17,7 +17,7 @@ namespace core.edi
         ///<SUMMARY>
         /// 
         IMyGridTerminalSystem GridTerminalSystem;
-        
+
         const string creator = "Mahtrok";
         const string title = "$IOS <EDI> ";
         const string version = "v1.0";
@@ -102,7 +102,32 @@ namespace core.edi
         ///</SUMMARY>
 
 
+        /// <Command API>
+        const string API_RAISE_ALARM = "API_RAISE_ALARM";
+        const string API_DISABLE_ALARM = "API_DISABLE_ALARM";
+        const string API_SHUTDOWN_SHIP = "API_SHUTDOWN_SHIP";
+        const string API_BOOT_SHIP = "API_BOOT_SHIP";
+        const string API_DISABLE_BLOCK = "API_DISABLE_BLOCK";
+        const string API_ENABLE_BLOCK = "API_ENABLE_BLOCK";
+        const string API_ATTACK_DETECTED = "API_ATTACK_DETECTED";
+        const string API_ATTACK_DEFENDET = "API_ATTACK_DEFENDET";
+        const string API_COLLISION_ALERT = "API_ATTACK_DEFENDET";
+        const string API_STATUS_GREEN = "API_STATUS_GREEN";
+        const string API_STATUS_ORANGE = "API_STATUS_ORANGE";
+        const string API_STATUS_RED = "API_STATUS_RED";
+        const string API_CANT_PRESURISE = "API_CANT_PRESURISE";
 
+        const string API_EDI_LOGON = "API_EDI_LOGON";
+        const string API_EDI_LOGOFF = "API_EDI_LOGOFF";
+
+        const string API_TVI_LOGON = "API_TVI_LOGON";
+        const string API_TVI_LOGOFF = "API_TVI_LOGOFF";
+
+        const string API_COM_LOGON = "API_COM_LOGON";
+        const string API_COM_LOGOFF = "API_COM_LOGOFF ";
+
+
+        /// </Command API>
 
 
         // << 1.0 BLOCK ID SETTINGS >> //
@@ -180,13 +205,13 @@ namespace core.edi
         List<IMyProgrammableBlock> programs;
         List<IMyTimerBlock> timers;
         IMyTimerBlock securityTimer;
-        IMyProgrammableBlock core;
+        IMyProgrammableBlock SiosMainframe;
 
         List<IMyLargeInteriorTurret> turrets;
         List<IMyLargeGatlingTurret> gatlings;
         List<IMyLargeMissileTurret> missiles;
 
-        int platformRoleID = 0;
+        int platformRoleID;
         int airVentCnt = 0;
         int initLoop = 0;
         const string blank = "\n";
@@ -249,16 +274,28 @@ namespace core.edi
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                       MAIN METHOD                                                                           */
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        void _FindRecommeredScreens()
+        void _FindDebugScreen()
         {
             List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
-            GridTerminalSystem.SearchBlocksOfName(debugID, _debugs);
+            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_debugs);
             if (_debugs.Count > 0)
             {
-                debugger.Add((IMyTextPanel)_debugs[0]);
-                debugEnabled = true;
+                for (int i = 0; i < _debugs.Count; i++)
+                {
+                    if (_debugs[i].CustomNameWithFaction.Contains(debugID))
+                    {
+                        debugger.Add((IMyTextPanel)_debugs[0]);
+                        debugEnabled = true;
+                    }
+                }
             }
+        }
+
+        void _FindConfigScreen()
+        {
+
             List<IMyTerminalBlock> _configScreens = new List<IMyTerminalBlock>();
+            // make sure that we only gather TextPanels
             GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_configScreens);
             int _screens = 0;
             Debug("Screens found:" + _configScreens.Count);
@@ -266,38 +303,41 @@ namespace core.edi
             {
                 if (_configScreens[i].CustomName.Contains(configID))
                 {
-                    _screens++;
+                    _screens++; // there should`nt be more than 1!
                     config = (IMyTextPanel)_configScreens[i];
                     Debug("ConfigScreen found who contains the name:" + configID);
                     Debug("External config file found! Loading DATA...");
                     LoadExternalConfigData();
-                 }
-                if (_screens == 0) 
+                }
+                if (_screens == 0)
                 {
                     Debug("No Configscreen found");
                 }
             }
 
         }
-        void _FindCoreOS() {
+        bool _FindCoreOS()
+        {
             List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
-            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_blocks);
-
+            // CoreOS has to be a TerminalBlock
+            GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_blocks);
             for (int i = 0; i < _blocks.Count; i++)
             {
                 if (_blocks[i].CustomName.Contains(coreID))
                 {
                     IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
-                    core = _program;
-                    core.TryRun("API: attack detected");
+                    SiosMainframe = _program;
+                    return true;
                 }
             }
+            return false;
         }
 
         public void Init()
         {
-            
+
             debugMessages = new List<string>();
+            _FindDebugScreen();
             gravs = new List<IMyGravityGenerator>();
             airvents = new List<IMyAirVent>();
             alerts = new List<IMySoundBlock>();
@@ -311,30 +351,54 @@ namespace core.edi
             turrets = new List<IMyLargeInteriorTurret>();
             gatlings = new List<IMyLargeGatlingTurret>();
             missiles = new List<IMyLargeMissileTurret>();
-            _FindCoreOS();
-            _FindRecommeredScreens();
+            if (_FindCoreOS())
+                SendApiCommand(API_EDI_LOGON);
+
+            _FindConfigScreen();
             // Calling Core: Hello EDI is active
-            core.TryRun("API: EDI LOGON");
+            SendApiCommand(API_EDI_LOGON);
         }
 
         void Main(string argument)
         {
-            
+
             ////////////////////// INITIALIZATION
             Init();
-            if (argument != "")
-                Debug("Processing Argument: " + argument);
-                ProcessArgument(argument);
+            ///////////////////// DEBUGGER
+            if (debugEnabled)
+                DisplayDebug();
             ////////////////////// GETTING ALL BLOCKs
             if (!booted)
                 GetBlocks();
             ////////////////////// SECURITY
+            securityState();
+            ///////////////////// DISPLAY
+            Display();
+            ///////////////////// RESET SCRIPT
+            Reset();
+            initLoop++;
+        }
+
+
+
+
+        void Reset()
+        {
+            installEnabled = false;
+            airVentCnt = 0;
+            booted = false;
+        }
+
+        void securityState()
+        {
+
+
             if (securityActive)
             {
                 Debug("<EDI>: Active");
                 if (hackDetected || attackDetected)
                 {
-                   
+
                     //IMyTerminalBlock CORE = GridTerminalSystem.GetBlockWithName("$IOS CORE");
                     //core = (IMyProgrammableBlock)CORE;
                     //core.TryRun("API: attack detected");
@@ -352,67 +416,13 @@ namespace core.edi
                     Debug("-> Pressure: Stable");
                 }
             }
-            ///////////////////// DISPLAY
-            Display();
-            ///////////////////// DEBUGGER
-            if (debugEnabled)
-                DisplayDebug();
-            ///////////////////// RESET SCRIPT
-            Reset();
-            initLoop++;
-        }
-
-        void ProcessArgument(string _argument)
-        {
-            Debug("Argument: " + _argument);
-            _argument = _argument.ToLower();
-   
-            if (_argument.Contains("debug") || _argument.Contains("api:")) {
-                List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
-                GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_blocks);
-                Debug("Argument contains debug");
-                Debug("Searchring for $IOS CORE with Name:" + coreID);
-                Debug("Programmable Blocks Found:" + _blocks.Count);
-                for (int i = 0; i < _blocks.Count; i++)
-                {
-                    Debug("Researching Block with name: " + _blocks[i].CustomName);
-                    if (_blocks[i].CustomName.Contains(coreID))
-                    {
-                        Debug("Found block which contains " + programID);
-                        IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
-                        Debug("Searching for programmname: " + coreID + " - founding: " + _program.CustomName);
-                        Debug("wohoooo: sending command to core");
-                        core = _program;
-                        core.TryRun(_argument);
-                    }
-                }
-            }  
-            else if (_argument.Contains("secured"))
-            {
-                hackDetected = false;
-                attackDetected = false;
-                if (!booted)
-                    GetBlocks();
-                SetCondition("green");
-            }
-            else
-            {
-                Debug("Unknown Argument: " + _argument);
-            }
-        }
-
-        void Reset()
-        {
-            installEnabled = false;
-            airVentCnt = 0;
-            booted = false;
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
         /*                                                                       INITIALIZATION                                                                           */
         ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
-       
+
 
         void GetBlocks()
         {
@@ -484,14 +494,12 @@ namespace core.edi
                             }
                         }
                     }
-                
+
                     ////////////////////// GETTING PROGRAMS //////////////////////
                     if (_blocks[i].CustomName.Contains(programID))
                     {
                         IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
-                        if (_program.CustomName.Contains(coreID))
-                            core = _program;
-                        else
+                        if (!_program.CustomName.Contains(coreID))
                             programs.Add(_program);
                     }
                     ///////////////////// GETTING TIMERBLOCKS ////////////////////
@@ -620,14 +628,14 @@ namespace core.edi
 
         void StoreExternalConfigData()
         {
-           /* string _file = "$platformID: " + platformID + blank;
-            _file += "$programID: " + programID + blank;
-            _file += "$platformRoleID: " + platformRoleID.ToString() + blank;
-            _file += "$condition: " + condition + blank;
-            _file += "$install enabled: " + installEnabled.ToString() + blank;
-            _file += "$activate security: " + securityActive.ToString() + blank;
-            _file += "$edi Debug: " + debugEnabled.ToString() + blank;
-            config.WritePublicText(_file); */
+            /* string _file = "$platformID: " + platformID + blank;
+             _file += "$programID: " + programID + blank;
+             _file += "$platformRoleID: " + platformRoleID.ToString() + blank;
+             _file += "$condition: " + condition + blank;
+             _file += "$install enabled: " + installEnabled.ToString() + blank;
+             _file += "$activate security: " + securityActive.ToString() + blank;
+             _file += "$edi Debug: " + debugEnabled.ToString() + blank;
+             config.WritePublicText(_file); */
         }
 
         void Display()
@@ -823,6 +831,27 @@ namespace core.edi
                 alerts[i].GetActionWithName("StopSound").Apply(alerts[i]);
             }
         }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /*                                                                          API COMMUNICATION                                                                              */
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        bool SendApiCommand(string _msg)
+        {
+            Debug("Sending Message to $IOS: " + _msg);
+            try
+            {
+                SiosMainframe.TryRun(_msg);
+            }
+            catch (Exception)
+            {
+                Debug("Exeption thrown (Command Send): ");
+                Debug("$IOS Not Available?");
+                return false;
+            }
+            return true;
+        }
+
+
+
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                          DEBUGGER                                                                              */
