@@ -27,15 +27,15 @@ namespace core
         const string SIOS_DEBUG_SCREEN_ID = "_SIOS_CORE_DEBUG_";
         ///<SUMMARY>
         // Mandatory Blockname of your Mainframe
-        const string SYOS_PROGRAMBLOCK_ID = "_SIOS_CORE_MAINFRAME_";
+        const string SIOS_PROGRAMBLOCK_ID = "_SIOS_CORE_MAINFRAME_";
         // Mandatory Blockname of your EDI Defence Mainframe
-        const string SYOS_ADDON_EDI_ID = "_SIOS_EDI_ADDON_";
+        const string SIOS_ADDON_EDI_ID = "_SIOS_EDI_ADDON_";
         // Mandatory Blockname of your TVI Trading Mainframe
-        const string SYOS_ADDON_TVI_ID = "_SIOS_TVI_ADDON_";
+        const string SIOS_ADDON_TVI_ID = "_SIOS_TVI_ADDON_";
 
         Dictionary<string, string> RUNNING_CONFIGURATION;
-
         Dictionary<IMyInteriorLight, Color> LIGHT_CONFIGURATION;
+        Dictionary<IMyTerminalBlock, String> BLOCK_INVENTORY;
 
 
         string platformID = "";
@@ -260,27 +260,53 @@ namespace core
         }
         void Main(string argument)
         {
+            debugMessages = new List<string>();
+            if (argument == "reinstall")
+            {
+                if (VALUE_PLATTFORM_ID != "0")
+                {
+                    INITIALIZED = false;
+                    BOOTED = false;
+                    Uninstall();
+                    BLOCK_INVENTORY = new Dictionary<IMyTerminalBlock, string>();
+                    Install();
+                    INSTALL_ENABLED = false;
+                } else {
+                    Debug("ERROR: reinstall only available after install");
+                }
 
-            if (argument == "reinstall") {
-               INITIALIZED = false;
-               BOOTED = false;
+            }
+            if (argument == "install")
+            {
+                INITIALIZED = false;
+                BOOTED = false;
+                if (!INSTALL_ENABLED)
+                {
+                    BLOCK_INVENTORY = new Dictionary<IMyTerminalBlock, string>();
+                    if (VALUE_PLATTFORM_ID == "0") {
+                        debugMessages.Clear();
+                        Install();
+                        INSTALL_ENABLED = true;
+                    } else {
+                        debugMessages.Clear();
+                        Debug("ERROR: You need to uninstall first!");
+                    }
+                    
+                }
             }
 
             ///////////////////// INITIALIZATION /////////////////////
             if (!INITIALIZED) {
                 _generateConfig();
                 Init();
+                DisplayDebug();
                 Debug("System Initialized");
             } else {
                 Debug("System already Initialized");
             }
             DisplayDebug();
-            Debug("DEBUG DISPLAYED");
             ////////////////////// DEBUGGER ///////////////////////
-            Debug("PROZESSING ARGUMENTS");
             ProcessArgument(argument);
-            Debug("ARGUMENTS PROCESSED");
-
             ///////////////////// INSTALLATION /////////////////////
             ////////////////// GETTING ALL BLOCKs /////////////////
             if (!BOOTED && INITIALIZED)
@@ -297,17 +323,26 @@ namespace core
             Display();
             ///////////////////// RESET SCRIPT ////////////////////
             //Reset();
+            if (argument == "uninstall")
+            {
+                if (VALUE_PLATTFORM_ID == "0") {
+                    Debug("ERROR: $SIOS is not installed!");
+                } else {
+                    debugMessages.Clear();
+                    Debug("Uninstalling");
+                    Uninstall();
+                }
+            }
+
             DisplayDebug();
         }
 
         void ProcessArgument(string _argument)
         {
             _argument = _argument.Trim();
-            Debug("Argument detected! : " + _argument);
 
             if (_argument == "reload")
             {
-                Debug("If argument = reload -.-");
                 LoadExternalConfigData();
             }
             if (_argument == "clear") {
@@ -316,19 +351,16 @@ namespace core
 
             else if (_argument.StartsWith("delete: "))
             {
-                Debug("If argument = delete -.-");
                 _argument = _argument.Substring(8);
                 Delete(_argument);
             }
             else if (_argument.StartsWith("replace: "))
             {
-                Debug("If argument replace -.-");
                 _argument = _argument.Substring(9);
                 Replace(_argument);
             }
             else if (_argument.StartsWith("API_"))
             {
-                Debug("API! : " + _argument);
                 ProcessAPIArgument(_argument);
             } else {
                 Debug("Damn, argument is not valid");
@@ -443,7 +475,7 @@ namespace core
             GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_blocks);
             for (int i = 0; i < _blocks.Count; i++)
             {
-                if (_blocks[i].CustomName.Contains(SYOS_PROGRAMBLOCK_ID))
+                if (_blocks[i].CustomName.Contains(SIOS_PROGRAMBLOCK_ID))
                 {
                     core = (IMyProgrammableBlock)_blocks[i];
                     Debug("Found myseLF - Generating awareness - I know who I am. I am!");
@@ -470,7 +502,7 @@ namespace core
         }
         void Init()
         {
-            debugMessages = new List<string>();
+
             debugger = new List<IMyTextPanel>();
             InitRoles();
             _FindDebugScreen();
@@ -603,9 +635,9 @@ namespace core
                     if (_blocks[i].CustomName.Contains(PROGRAM_ID))
                     {
                         IMyProgrammableBlock _program = (IMyProgrammableBlock)_blocks[i];
-                        if (_program.CustomName.Contains(SYOS_PROGRAMBLOCK_ID))
+                        if (_program.CustomName.Contains(SIOS_PROGRAMBLOCK_ID))
                             core = _program;
-                        else if (_program.CustomName.Contains(SYOS_ADDON_EDI_ID))
+                        else if (_program.CustomName.Contains(SIOS_ADDON_EDI_ID))
                             EDI = _program;
                         else if (_program.CustomName.Contains(TRADER_ID))
                             traders.Add(_program);
@@ -646,60 +678,57 @@ namespace core
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         private void _FormatBlock(List<IMyTerminalBlock> _blockList, string _blocktype)
         {
-            string _standardText = PREFIX + platformID + DIVIDER;
+            string _standardText = PREFIX + VALUE_PLATTFORM_ID + DIVIDER;
             string _blockText = _standardText;
             string _oldName;
             string _blockTextEnd;
             for (int i = 0; i < _blockList.Count; i++)
             {
                 _oldName = _blockList[i].CustomName;
-                _blockTextEnd = SUFFIX + BLANK + _oldName;
-                if (!_oldName.Contains(platformID))
-                {
+                _blockTextEnd = SUFFIX.ToString();
                     switch (_blocktype)
                     {
                         case "IMyAssembler":
-                            _blockText = _blockText + ASSEMBLER_ID + DIVIDER + PRODUCTION_ID + _blockTextEnd; break;
+                            _blockText = _standardText + ASSEMBLER_ID + DIVIDER + PRODUCTION_ID + _blockTextEnd; break;
                         case "IMyRefinery":
-                            _blockText = _blockText + REFINERY_ID + DIVIDER + PRODUCTION_ID + _blockTextEnd; break;
+                            _blockText = _standardText + REFINERY_ID + DIVIDER + PRODUCTION_ID + _blockTextEnd; break;
                         case "IMyConveyorSorter":
-                            _blockText = _blockText + SORTER_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
+                            _blockText = _standardText + SORTER_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyBatteryBlock":
-                            _blockText = _blockText + BATTERY_ID + DIVIDER + GRAVITY_ID + _blockTextEnd; break;
+                            _blockText = _standardText + BATTERY_ID + DIVIDER + GRAVITY_ID + _blockTextEnd; break;
                         case "IMyGravityGenerator":
-                            _blockText = _blockText + GRAVITY_ID + _blockTextEnd; break;
+                            _blockText = _standardText + GRAVITY_ID + _blockTextEnd; break;
                         case "IMyReactor":
-                            _blockText = _blockText + REACTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
+                            _blockText = _standardText + REACTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyOxygenGenerator":
-                            _blockText = _blockText + OXYGEN_ID + _blockTextEnd; break;
+                            _blockText = _standardText + OXYGEN_ID + _blockTextEnd; break;
                         case "IMyOxygenFarm":
-                            _blockText = _blockText + OXY_FARM_ID + _blockTextEnd; break;
+                            _blockText = _standardText + OXY_FARM_ID + _blockTextEnd; break;
                         case "IMyOxygenTank":
-                            _blockText = _blockText + OXY_TANK_ID + _blockTextEnd; break;
+                            _blockText = _standardText + OXY_TANK_ID + _blockTextEnd; break;
                         case "IMyAirVent":
-                            _blockText = _blockText + AIR_VENT_ID + DIVIDER + "$" + airVentCnt.ToString("0000") + _blockTextEnd;
+                            _blockText = _standardText + AIR_VENT_ID + DIVIDER + "$" + airVentCnt.ToString("0000") + _blockTextEnd;
                             airVentCnt++;
                             break;
                         case "IMyCargoContainer":
-                            _blockText = _blockText + CARGO_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
+                            _blockText = _standardText + CARGO_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyShipConnector":
-                            _blockText = _blockText + CONNECTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
+                            _blockText = _standardText + CONNECTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMyCollector":
-                            _blockText = _blockText + COLLECTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
+                            _blockText = _standardText + COLLECTOR_ID + DIVIDER + STORAGE_ID + _blockTextEnd; break;
                         case "IMySoundBlock":
-                            _blockText = _blockText + SPEAKER_ID + _blockTextEnd; break;
+                            _blockText = _standardText + SPEAKER_ID + _blockTextEnd; break;
                         case "IMyInteriorLight":
-                            string _color = ((IMyInteriorLight)_blockList[i]).GetValue<Color>("Color").ToString();
-                            _blockText = _blockText + LIGHT_ID + DIVIDER + _color + _blockTextEnd;
+                            _blockText = _standardText + LIGHT_ID + DIVIDER + _blockTextEnd;
                             break;
                         case "IMyDoor":
-                            _blockText = _blockText + DOOR_ID + _blockTextEnd; break;
+                            _blockText = _standardText + DOOR_ID + _blockTextEnd; break;
                         case "IMySensorBlock":
-                            _blockText = _blockText + SENSOR_ID + _blockTextEnd; break;
+                            _blockText = _standardText + SENSOR_ID + _blockTextEnd; break;
                         case "IMyButtonPanel":
-                            _blockText = _blockText + TERMINAL_ID + _blockTextEnd; break;
+                            _blockText = _standardText + TERMINAL_ID + _blockTextEnd; break;
                         case "IMyShipController":
-                            _blockText = _blockText + TERMINAL_ID + _blockTextEnd; break;
+                            _blockText = _standardText + TERMINAL_ID + _blockTextEnd; break;
                         case "IMyTextPanel":
                             //_blockText = _blockText + PANEL_ID + _blockTextEnd;
                             _blockText = _oldName;
@@ -709,23 +738,25 @@ namespace core
                             _blockText =_oldName;
                             break;
                         case "IMyTimerBlock":
-                            _blockText = _blockText + TIMER_ID + _blockTextEnd; break;
+                            _blockText = _standardText + TIMER_ID + _blockTextEnd; break;
                         case "IMyLargeGatlingTurret":
-                            _blockText = _blockText + GATTLING_TURRET_ID + _blockTextEnd; break;
+                            _blockText = _standardText + GATTLING_TURRET_ID + _blockTextEnd; break;
                         case "IMyLargeMissileTurret":
-                            _blockText = _blockText + MISSILE_TURRET_ID + _blockTextEnd; break;
+                            _blockText = _standardText + MISSILE_TURRET_ID + _blockTextEnd; break;
                         case "IMyLargeInteriorTurret":
-                            _blockText = _blockText + TURRET_ID + _blockTextEnd; break;
+                            _blockText = _standardText + TURRET_ID + _blockTextEnd; break;
                         default:
-                            _blockText = _blockText + " Unknown Block" + DIVIDER + _oldName + _blockTextEnd; break;
+                            _blockText = _standardText + " Unknown Block" + DIVIDER + _oldName + _blockTextEnd; break;
                     }
-                    if (!_blockList[i].CustomName.Contains(platformID))
-                    _blockList[i].SetCustomName(_standardText + _blockText);
-                }
+                        BLOCK_INVENTORY.Add(_blockList[i], _oldName);
+                        _blockList[i].SetCustomName(_blockText);
             }
         }
         void Install()
         {
+  
+            VALUE_PLATTFORM_ID = GetRandomPlatformID().ToString();
+            
             ///////////////////// INSTALL ASSEMBLERS /////////////////////
             List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyAssembler>(_blocks);
@@ -841,21 +872,13 @@ namespace core
             GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_blocks);
             for (int i = 0; i < _blocks.Count; i++)
             {
-                string _name = _blocks[i].CustomName;
-                if (_name.Contains(platformID))
-                {
-                    string[] _temp = _name.Split(SUFFIX);
-                    if (_temp[1].StartsWith(BLANK))
-                        _temp[1] = _temp[1].Substring(1);
-                    _name = "";
-                    for (int a = 1; a < _temp.Length; a++)
-                    {
-                        _name += _temp[a];
-                    }
-                    _blocks[i].SetCustomName(_name);
+                if (BLOCK_INVENTORY.ContainsKey(_blocks[i])) {
+                    _blocks[i].SetCustomName(BLOCK_INVENTORY[_blocks[i]]);
                 }
             }
             INSTALL_ENABLED = false;
+            VALUE_PLATTFORM_ID = "0";
+            StoreExternalConfigData();
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                           EXTERNAL DATA PROCESSING                                                            */
@@ -1012,7 +1035,6 @@ namespace core
         void Debug(string _msg)
         {
             debugMessages.Add(GetTimeStamp() + ": " + _msg + LF);
-            DisplayDebug();
         }
         void DisplayDebug()
         {
