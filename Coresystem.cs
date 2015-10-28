@@ -35,6 +35,9 @@ namespace core
 
         Dictionary<string, string> RUNNING_CONFIGURATION;
 
+        Dictionary<IMyInteriorLight, Color> LIGHT_CONFIGURATION;
+
+
         string platformID = "";
         bool INSTALL_ENABLED = false;
         bool hideVersionInfoOnScreen = false;
@@ -115,7 +118,7 @@ namespace core
         bool ENABLED = true;
 
         /// <Command API>
-        const string API_RELOAD_CONFIG = "API_RELOAD_CONFIG"
+        const string API_RELOAD_CONFIG = "API_RELOAD_CONFIG";
         const string API_RAISE_ALARM = "API_RAISE_ALARM";
         const string API_DISABLE_ALARM = "API_DISABLE_ALARM";
         const string API_SHUTDOWN_SHIP = "API_SHUTDOWN_SHIP";
@@ -124,7 +127,7 @@ namespace core
         const string API_ENABLE_BLOCK = "API_ENABLE_BLOCK";
         const string API_ATTACK_DETECTED = "API_ATTACK_DETECTED";
         const string API_ATTACK_DEFENDET = "API_ATTACK_DEFENDET";
-        const string API_COLLISION_ALERT = "API_ATTACK_DEFENDET";
+        const string API_COLLISION_ALERT = "API_COLLISION_ALERT";
         const string API_STATUS_GREEN = "API_STATUS_GREEN";
         const string API_STATUS_ORANGE = "API_STATUS_ORANGE";
         const string API_STATUS_RED = "API_STATUS_RED";
@@ -139,27 +142,7 @@ namespace core
         const string API_COM_LOGON = "API_COM_LOGON";
         const string API_COM_LOGOFF = "API_COM_LOGOFF ";
         /// </Command API>
-        Dictionary<string, string> API_COMMANDS = new Dictionary<string, string>();
-        API_COMMANDS.add(API_RELOAD_CONFIG,API_RELOAD_CONFIG);
-        API_COMMANDS.add(API_RAISE_ALARM,API_RAISE_ALARM);
-        API_COMMANDS.add(API_DISABLE_ALARM,API_DISABLE_ALARM);
-        API_COMMANDS.add(API_SHUTDOWN_SHIP,API_SHUTDOWN_SHIP);
-        API_COMMANDS.add(API_BOOT_SHIP,API_BOOT_SHIP);
-        API_COMMANDS.add(API_DISABLE_BLOCK,API_DISABLE_BLOCK);
-        API_COMMANDS.add(API_ENABLE_BLOCK,API_ENABLE_BLOCK);
-        API_COMMANDS.add(API_ATTACK_DETECTED,API_ATTACK_DETECTED);
-        API_COMMANDS.add(API_ATTACK_DEFENDET,API_ATTACK_DEFENDET);
-        API_COMMANDS.add(API_COLLISION_ALERT,API_COLLISION_ALERT);
-        API_COMMANDS.add(API_STATUS_GREEN,API_STATUS_GREEN);
-        API_COMMANDS.add(API_STATUS_ORANGE,API_STATUS_ORANGE);
-        API_COMMANDS.add(API_STATUS_RED,API_STATUS_RED);
-        API_COMMANDS.add(API_CANT_PRESURISE,API_CANT_PRESURISE);
-        API_COMMANDS.add(API_EDI_LOGON,API_EDI_LOGON);
-        API_COMMANDS.add(API_EDI_LOGOFF,API_EDI_LOGOFF);
-        API_COMMANDS.add(API_TVI_LOGON,API_TVI_LOGON);
-        API_COMMANDS.add(API_TVI_LOGOFF,API_TVI_LOGOFF);
-        API_COMMANDS.add(API_COM_LOGON,API_COM_LOGON);
-        API_COMMANDS.add(API_COM_LOGOFF,API_COM_LOGOFF);
+        Dictionary<string, string> API_COMMANDS;
 
 
 
@@ -180,7 +163,7 @@ namespace core
 
         string VALUE_PLATTFORM_ID = "0";
         string VALUE_PLATFORM_ROLE_ID = "0";
-        string VALUE_CONDITION = "greed";
+        string VALUE_CONDITION = "green";
         string VALUE_INSTALL_ENABLED = "false";
         string VALUE_HIDE_VERSION_INFO = "true";
         string VALUE_ALLOW_BEACON_RENAME = "false";
@@ -280,6 +263,7 @@ namespace core
 
             if (argument == "reinstall") {
                INITIALIZED = false;
+               BOOTED = false;
             }
 
             ///////////////////// INITIALIZATION /////////////////////
@@ -287,76 +271,70 @@ namespace core
                 _generateConfig();
                 Init();
                 Debug("System Initialized");
+            } else {
+                Debug("System already Initialized");
             }
+            DisplayDebug();
+            Debug("DEBUG DISPLAYED");
             ////////////////////// DEBUGGER ///////////////////////
-            if (DEBUG_ENABLED)
-                DisplayDebug();
-            if (argument == "reload")
-            {
-                LoadExternalConfigData();
-            }
+            Debug("PROZESSING ARGUMENTS");
+            ProcessArgument(argument);
+            Debug("ARGUMENTS PROCESSED");
 
-
-            /*if (ENABLED)
+            ///////////////////// INSTALLATION /////////////////////
+            ////////////////// GETTING ALL BLOCKs /////////////////
+            if (!BOOTED && INITIALIZED)
             {
-                if (argument != "")
-                    ProcessArgument(argument);
-                ///////////////////// INSTALLATION /////////////////////
-                if (INSTALL_ENABLED)
-                    Install();
-                ////////////////// GETTING ALL BLOCKs /////////////////
-                if (!BOOTED && INITIALIZED)
-                {
-                    GetBlocks();
-                }
+                Debug("GETTING BLOCKS");
+                GetBlocks();
+                Debug("Generating Blockconfig");
             }
+            Debug("STORING DATA");
             StoreExternalConfigData();
+            Debug("DATA STORED");
+            DisplayDebug();
             /////////////////////// DISPLAY /////////////////////////
             Display();
             ///////////////////// RESET SCRIPT ////////////////////
-            Reset();*/
-
+            //Reset();
+            DisplayDebug();
         }
 
         void ProcessArgument(string _argument)
         {
-            _argument = _argument.ToLower();
-            if (_argument.StartsWith("delete: "))
+            _argument = _argument.Trim();
+            Debug("Argument detected! : " + _argument);
+
+            if (_argument == "reload")
             {
+                Debug("If argument = reload -.-");
+                LoadExternalConfigData();
+            }
+            if (_argument == "clear") {
+                debugMessages.Clear();
+            }
+
+            else if (_argument.StartsWith("delete: "))
+            {
+                Debug("If argument = delete -.-");
                 _argument = _argument.Substring(8);
                 Delete(_argument);
             }
             else if (_argument.StartsWith("replace: "))
             {
+                Debug("If argument replace -.-");
                 _argument = _argument.Substring(9);
                 Replace(_argument);
             }
-            else if (_argument.StartsWith("condition: "))
+            else if (_argument.StartsWith("API_"))
             {
-                _argument = _argument.Substring(11).ToLower();
-                SetCondition(_argument.Replace(BLANK, "").Replace(LF, ""));
-            }
-            else if (_argument.StartsWith("api: "))
-            {
-                Debug("Argument Starts with API - Another Block calls an action");
+                Debug("API! : " + _argument);
                 ProcessAPIArgument(_argument);
+            } else {
+                Debug("Damn, argument is not valid");
             }
 
-            else
-            {
-                Debug("Argument: " + _argument);
-                switch (_argument)
-                {
-                    case "new id": platformID = GetRandomPlatformID().ToString(); StoreExternalConfigData(); break;
-                    case "uninstall": Uninstall(); break;
-                    case "install": INSTALL_ENABLED = true; Reset(); break;
-                    case "reboot": Reset(); INITIALIZED = false; Init(); Debug("Rebooting."); break;
-                    case "contact": Debug(GetContactData()); Debug(GetCoContactData()); break;
-                    case "logon_edi": ediInstalled = true; break;
-                    case "logon_tmvi": tmviInstalled = true; break;
-                    default: break;
-                }
-            }
+
         }
         void Delete(string _toDelete)
         {
@@ -392,6 +370,32 @@ namespace core
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         /*                                                                       INITIALIZATION                                                                           */
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        void _initAPI()
+        {
+            API_COMMANDS = new Dictionary<string, string>();
+            
+            API_COMMANDS.Add(API_RELOAD_CONFIG, API_RELOAD_CONFIG);
+            API_COMMANDS.Add(API_RAISE_ALARM, API_RAISE_ALARM);
+            API_COMMANDS.Add(API_DISABLE_ALARM, API_DISABLE_ALARM);
+            API_COMMANDS.Add(API_SHUTDOWN_SHIP, API_SHUTDOWN_SHIP);
+            API_COMMANDS.Add(API_BOOT_SHIP, API_BOOT_SHIP);
+            API_COMMANDS.Add(API_DISABLE_BLOCK, API_DISABLE_BLOCK);
+            API_COMMANDS.Add(API_ENABLE_BLOCK, API_ENABLE_BLOCK);
+            API_COMMANDS.Add(API_ATTACK_DETECTED, API_ATTACK_DETECTED);
+            API_COMMANDS.Add(API_ATTACK_DEFENDET, API_ATTACK_DEFENDET);
+            API_COMMANDS.Add(API_COLLISION_ALERT, API_COLLISION_ALERT);
+            API_COMMANDS.Add(API_STATUS_GREEN, API_STATUS_GREEN);
+            API_COMMANDS.Add(API_STATUS_ORANGE, API_STATUS_ORANGE);
+            API_COMMANDS.Add(API_STATUS_RED, API_STATUS_RED);
+            API_COMMANDS.Add(API_CANT_PRESURISE, API_CANT_PRESURISE);
+            API_COMMANDS.Add(API_EDI_LOGON, API_EDI_LOGON);
+            API_COMMANDS.Add(API_EDI_LOGOFF, API_EDI_LOGOFF);
+            API_COMMANDS.Add(API_TVI_LOGON, API_TVI_LOGON);
+            API_COMMANDS.Add(API_TVI_LOGOFF, API_TVI_LOGOFF);
+            API_COMMANDS.Add(API_COM_LOGON, API_COM_LOGON);
+            API_COMMANDS.Add(API_COM_LOGOFF, API_COM_LOGOFF);
+        }
+
         void _FindDebugScreen()
         {
             List<IMyTerminalBlock> _debugs = new List<IMyTerminalBlock>();
@@ -421,11 +425,11 @@ namespace core
                     Debug("Textpanels which contains SIOS_CONFIG_SCREEN_ID: " + SIOS_CONFIG_SCREEN_ID);
                     _screens++; // there should`nt be more than 1!
                     config = (IMyTextPanel)_blocks[i];
-                    StoreExternalConfigData();
+ 
                     config.SetValue("BackgroundColor", panelDefaultBG);
                     config.SetValue("FontColor", panelDefaultFC);
                     config.SetValue("FontSize", 0.8f);
-
+                    StoreExternalConfigData();
                 }
             }
             if (_screens == 0) Debug("No Configscreen found");
@@ -466,13 +470,12 @@ namespace core
         }
         void Init()
         {
-
-
             debugMessages = new List<string>();
             debugger = new List<IMyTextPanel>();
             InitRoles();
             _FindDebugScreen();
             _FindMyseLF();
+            _initAPI();
             assemblers = new List<IMyAssembler>();
             refineries = new List<IMyRefinery>();
             sorters = new List<IMyConveyorSorter>();
@@ -497,11 +500,13 @@ namespace core
             turrets = new List<IMyLargeInteriorTurret>();
             _FindConfigScreen();
             INSTALL_ENABLED = true;
+            INITIALIZED = true;
 
         }
         void GetBlocks()
         {
             List<IMyTerminalBlock> _blocks = new List<IMyTerminalBlock>();
+            LIGHT_CONFIGURATION = new Dictionary<IMyInteriorLight, Color>();
             GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(_blocks);
             for (int i = 0; i < _blocks.Count; i++)
             {
@@ -558,8 +563,11 @@ namespace core
                     if (_blocks[i].CustomName.Contains(STORAGE_ID))
                         storage.Add(((IMyInventoryOwner)_blocks[i]).GetInventory(0));
                     /////////////////// GETTING INTERIOR LIGHTS ////////////////////
-                    if (_blocks[i].CustomName.Contains(LIGHT_ID))
+                    if (_blocks[i].CustomName.Contains(LIGHT_ID)) {
                         lights.Add((IMyInteriorLight)_blocks[i]);
+                        Color _color = ((IMyInteriorLight)_blocks[i]).GetValue<Color>("Color");
+                        LIGHT_CONFIGURATION.Add((IMyInteriorLight)_blocks[i], _color);
+                    }
                     /////////////////// GETTING SOUND BLOCKS ////////////////////
                     if (_blocks[i].CustomName.Contains(SPEAKER_ID))
                         speakers.Add((IMySoundBlock)_blocks[i]);
@@ -578,16 +586,16 @@ namespace core
                         IMyTextPanel _panel = (IMyTextPanel)_blocks[i];
                         if (_panel.GetPublicTitle().Contains(SIOS_DEBUG_SCREEN_ID))
                         {
-                            debugger.Add(_panel);
-                            DEBUG_ENABLED = true;
+                            //debugger.Add(_panel);
+                            //DEBUG_ENABLED = true;
                         }
                         else
                         {
                             if (!_panel.CustomName.Contains(SIOS_CONFIG_SCREEN_ID) && _panel.GetPublicTitle() == INFO_ID)
                             {
-                                _panel.ShowPublicTextOnScreen();
-                                _panel.SetValue("FontSize", 0.8f);
-                                panels.Add(_panel);
+                               // _panel.ShowPublicTextOnScreen();
+                               // _panel.SetValue("FontSize", 0.8f);
+                               // panels.Add(_panel);
                             }
                         }
                     }
@@ -860,9 +868,13 @@ namespace core
             string[] lines = _file.Split(CONFIG_DIVIDER);
             for (int i = 0; i < lines.Length; i++)
             {
-                string[] row = lines[i].Split(CONFIG_SEPARATOR);
-                if (RUNNING_CONFIGURATION.ContainsKey(row[0]))
+                string[] row = lines[i].Split(CONFIG_DIVIDER);
+                if (RUNNING_CONFIGURATION.ContainsKey(row[0])) {
+                    Debug("Running config contains key, overwriting value");
                     RUNNING_CONFIGURATION[row[0]] = row[1].Trim();
+                }
+                    
+
             }
             Debug(config.GetPublicText());
             StoreExternalConfigData();
@@ -873,24 +885,26 @@ namespace core
         {
             // write to screen
             string _file;
-            _file = KEY_PLATTFORM_ID + ":" + RUNNING_CONFIGURATION[KEY_PLATTFORM_ID] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_PLATFORM_ROLE_ID + ":" + RUNNING_CONFIGURATION[KEY_PLATFORM_ROLE_ID] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_CONDITION + ":" + RUNNING_CONFIGURATION[KEY_CONDITION] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_INSTALL_ENABLED + ":" + RUNNING_CONFIGURATION[KEY_INSTALL_ENABLED] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_HIDE_VERSION_INFO + ":" + RUNNING_CONFIGURATION[KEY_HIDE_VERSION_INFO] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_ALLOW_BEACON_RENAME + ":" + RUNNING_CONFIGURATION[KEY_ALLOW_BEACON_RENAME] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_ACTIVATE_SECURITY + ":" + RUNNING_CONFIGURATION[KEY_ACTIVATE_SECURITY] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_LCD_BG_COLOR + ":" + RUNNING_CONFIGURATION[KEY_LCD_BG_COLOR] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_LCD_FONT_COLOR + ":" + RUNNING_CONFIGURATION[KEY_LCD_FONT_COLOR] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_DEBUG_ENABLED + ":" + RUNNING_CONFIGURATION[KEY_DEBUG_ENABLED] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_EDI_INSTALLED + ":" + RUNNING_CONFIGURATION[KEY_EDI_INSTALLED] + BLANK + CONFIG_DIVIDER + LF;
-            _file += KEY_ATI_INSTALLED + ":" + RUNNING_CONFIGURATION[KEY_ATI_INSTALLED] + BLANK + CONFIG_DIVIDER + LF;
+            _file = GetTimeStamp() + ":" + GetVersionInfo() ;
+            _file += KEY_PLATTFORM_ID + ":" + RUNNING_CONFIGURATION[KEY_PLATTFORM_ID] + LF;
+            _file += KEY_PLATFORM_ROLE_ID + ":" + RUNNING_CONFIGURATION[KEY_PLATFORM_ROLE_ID] + LF;
+            _file += KEY_CONDITION + ":" + RUNNING_CONFIGURATION[KEY_CONDITION] + LF;
+            _file += KEY_INSTALL_ENABLED + ":" + RUNNING_CONFIGURATION[KEY_INSTALL_ENABLED] + LF;
+            _file += KEY_HIDE_VERSION_INFO + ":" + RUNNING_CONFIGURATION[KEY_HIDE_VERSION_INFO] + LF;
+            _file += KEY_ALLOW_BEACON_RENAME + ":" + RUNNING_CONFIGURATION[KEY_ALLOW_BEACON_RENAME] + LF;
+            _file += KEY_ACTIVATE_SECURITY + ":" + RUNNING_CONFIGURATION[KEY_ACTIVATE_SECURITY] + LF;
+            _file += KEY_LCD_BG_COLOR + ":" + RUNNING_CONFIGURATION[KEY_LCD_BG_COLOR] + LF;
+            _file += KEY_LCD_FONT_COLOR + ":" + RUNNING_CONFIGURATION[KEY_LCD_FONT_COLOR] + LF;
+            _file += KEY_DEBUG_ENABLED + ":" + RUNNING_CONFIGURATION[KEY_DEBUG_ENABLED] + LF;
+            _file += KEY_EDI_INSTALLED + ":" + RUNNING_CONFIGURATION[KEY_EDI_INSTALLED] + LF;
+            _file += KEY_ATI_INSTALLED + ":" + RUNNING_CONFIGURATION[KEY_ATI_INSTALLED] + LF;
             config.WritePublicText(_file);
 
         }
 
         void Display()
         {
+
             string _info = GetVersionInfo();
             if (hideVersionInfoOnScreen)
                 _info = "";
@@ -909,11 +923,10 @@ namespace core
             Debug("New Condition: [" + _condition + "]");
             Debug("Switching Lights: " + lights.Count);
 
-            if (!BOOTED)
-                GetBlocks();
             Color lcdBGColor = new Color(0, 0, 0);
             Color fontColor = new Color(255, 255, 255);
             Color lightColor = new Color(255, 255, 255);
+            Debug("Switch to condition: " + _condition);
             switch (_condition)
             {
                 case "green":
@@ -922,14 +935,11 @@ namespace core
                     for (int i = 0; i < lights.Count; i++)
                     {
                         string _name = lights[i].CustomName;
-                        string[] _temp = _name.Split('}');
-                        _temp[0] = _temp[0].Replace(PREFIX + platformID + DIVIDER + LIGHT_ID + DIVIDER, "").Replace("{", "");
-                        string[] _colors = _temp[0].Split(' ');
-                        _colors[0] = _colors[0].Replace("R:", "");
-                        _colors[1] = _colors[1].Replace("G:", "");
-                        _colors[2] = _colors[2].Replace("B:", "");
-                        lights[i].SetValue("Color", new Color(int.Parse(_colors[0]), int.Parse(_colors[1]), int.Parse(_colors[2])));
+                        Color color = LIGHT_CONFIGURATION[lights[i]];
+                        lights[i].SetValue("Color", color);
+                        Debug("OLD COLOR WAS:" + color.ToString());
                     }
+                    VALUE_CONDITION = "green";
                     break;
                 case "orange":
                     lcdBGColor = conditionOrangeBG;
@@ -939,6 +949,7 @@ namespace core
                     {
                         lights[i].SetValue("Color", lightColor);
                     }
+                    VALUE_CONDITION = "orange";
                     break;
                 case "red":
                     Debug("Switching Lights to condition red");
@@ -951,17 +962,21 @@ namespace core
                     {
                         lights[i].SetValue("Color", lightColor);
                     }
+                    VALUE_CONDITION = "red";
                     break;
                 default:
                     lcdBGColor = panelDefaultBG;
                     fontColor = panelDefaultFC;
                     break;
             }
+            Debug("SETTING COLOR");
             for (int i = 0; i < panels.Count; i++)
             {
                 panels[i].SetValue("BackgroundColor", lcdBGColor);
                 panels[i].SetValue("FontColor", fontColor);
             }
+            RUNNING_CONFIGURATION[KEY_CONDITION] = VALUE_CONDITION;
+            StoreExternalConfigData();
         }
         void InitRoles()
         {
@@ -997,6 +1012,7 @@ namespace core
         void Debug(string _msg)
         {
             debugMessages.Add(GetTimeStamp() + ": " + _msg + LF);
+            DisplayDebug();
         }
         void DisplayDebug()
         {
@@ -1015,6 +1031,7 @@ namespace core
                     else
                         throw new ArgumentNullException("Missing Block!");
                 }
+
             }
             catch (NullReferenceException ex)
             {
@@ -1027,13 +1044,89 @@ namespace core
         // if a Argument starts with API:
         void ProcessAPIArgument(string _argument)
         {
+            Debug("API CALL DETECTED!");
             Debug(_argument);
-            _argument = _argument.ToLower();
-            if (dictionary.ContainsKey(argument)){
+            if (API_COMMANDS.ContainsKey(_argument)){
+                Debug("Argument defined for API CALL:" + _argument);
+                switch (_argument)
+                {
+                    case API_RELOAD_CONFIG:
+                        Debug("Argument:" + API_RELOAD_CONFIG);
+                        LoadExternalConfigData();
+                        break;
+                    case API_RAISE_ALARM:
+                        Debug("Argument:" + API_RAISE_ALARM);
+                        break;
+                    case API_DISABLE_ALARM:
+                        Debug("Argument:" + API_DISABLE_ALARM);
+                        SetCondition("green");
+                        break;
+                    case API_SHUTDOWN_SHIP:
+                        Debug("Argument:" + API_SHUTDOWN_SHIP);
+                        // disableShip
+                        break;
+                    case API_BOOT_SHIP:
+                        Debug("Argument:" + API_BOOT_SHIP);
+                        // enable ship
+                        break;
+                    case API_DISABLE_BLOCK:
+                        Debug("Argument:" + API_DISABLE_BLOCK);
+                        // dont know what we should do - need more arguments
+                        break;
+                    case API_ENABLE_BLOCK:
+                        Debug("Argument:" + API_ENABLE_BLOCK);
+                        // dont know what we should do - need more arguments
+
+                        break;
+                    case API_ATTACK_DETECTED:
+                        Debug("Argument:" + API_CANT_PRESURISE);
+                        SetCondition("red");
+                        break;
+
+                    case API_ATTACK_DEFENDET:
+                        Debug("Argument:" + API_ATTACK_DEFENDET);
+                        // dont know what we should do - need more arguments
+                        SetCondition("green");
+                        break;
+                    case API_COLLISION_ALERT:
+                        Debug("Argument:" + API_COLLISION_ALERT);
+                        SetCondition("orange");
+                        break;
+                    case API_STATUS_GREEN:
+                        Debug("Argument:" + API_STATUS_GREEN);
+                        RUNNING_CONFIGURATION[KEY_CONDITION] = "red";
+                        SetCondition("green");
+                        break;
+                    case API_STATUS_ORANGE:
+                        Debug("Argument:" + API_STATUS_ORANGE);
+                        SetCondition("orange");
+                        break;
+                    case API_STATUS_RED:
+                        Debug("Argument:" + API_STATUS_RED);
+                        RUNNING_CONFIGURATION[KEY_CONDITION] = "red";
+                        SetCondition("red");
+                        break;
+                    case API_CANT_PRESURISE:
+                        Debug("Argument:" + API_CANT_PRESURISE);
+                        break;
+                    default:
+                        break;
+                }
+
 
             } else {
-                Debug("Argument is not a valid API Command")
+                Debug("Argument is not a valid API Command");
             }
         }
+
+   
+
+
+
+
+     
+
+
+
    }
 }
