@@ -57,7 +57,7 @@ namespace core
         const string BLANK = " ";
         const char DIVIDER = '|';
         const char LIST_DIVIDER = ',';
-        const char CONFIG_DIVIDER = '$';
+        const char CONFIG_DIVIDER = '\n';
         const char CONFIG_SEPARATOR = ':';
         const char SUFFIX = ']';
         const string PREFIX = "[";
@@ -889,21 +889,28 @@ namespace core
             string _file = config.GetPublicText();
             Debug(config.GetPublicText());
             string[] lines = _file.Split(CONFIG_DIVIDER);
+            Debug("Element Count of LINES" + lines.Length);
             for (int i = 0; i < lines.Length; i++)
             {
-                string[] row = lines[i].Split(CONFIG_DIVIDER);
+                string[] row = lines[i].Split(CONFIG_SEPARATOR);
+                Debug("Searching for Key:" + row[0]);
                 if (RUNNING_CONFIGURATION.ContainsKey(row[0])) {
                     Debug("Running config contains key, overwriting value");
                     RUNNING_CONFIGURATION[row[0]] = row[1].Trim();
                 }
-                    
 
             }
             Debug(config.GetPublicText());
             StoreExternalConfigData();
-
+            _reactOnConfigChange();
 
         }
+        void _reactOnConfigChange()
+        {
+            // now i need to read the config and change the whatever on whatever config 
+        }
+
+
         void StoreExternalConfigData()
         {
             // write to screen
